@@ -9,7 +9,7 @@ pragma experimental ABIEncoderV2;
 import {
     BaseStrategy,
     StrategyParams
-} from "@yearnvaults/contracts/BaseStrategy.sol";
+} from "@yearn/contracts/BaseStrategy.sol";
 import {
     SafeERC20,
     SafeMath,

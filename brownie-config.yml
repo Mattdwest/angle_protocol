@@ -16,7 +16,7 @@ compiler:
   solc:
     version: 0.6.12
     remappings:
-      - "@yearnvaults=yearn/yearn-vaults@0.4.3"
+      - "@yearn=yearn/yearn-vaults@0.4.3"
       - "@openzeppelin=OpenZeppelin/openzeppelin-contracts@3.1.0"
 
 reports:
