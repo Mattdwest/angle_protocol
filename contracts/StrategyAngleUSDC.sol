@@ -15,6 +15,7 @@ import {BaseStrategyInitializable} from "@yearn/contracts/BaseStrategy.sol";
 import "../../interfaces/curve/ICurve.sol";
 import "../../interfaces/Angle/IAngle.sol";
 import "../../interfaces/Angle/IAngleStake.sol";
+import "../../interfaces/Angle/IAngleGauge.sol";
 import "../../interfaces/uniswap/IUni.sol";
 
 
@@ -85,6 +86,8 @@ contract StrategyAngleUSDC is BaseStrategyInitializable {
         poolManager = _poolManager;
 
         percentKeep = 1000;
+        treasury = address(0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde);
+
 
         IERC20(want).safeApprove(angle, uint256(-1));
         IERC20(sanToken).safeApprove(angleStake, uint256(-1));
@@ -238,11 +241,17 @@ contract StrategyAngleUSDC is BaseStrategyInitializable {
 
         uint256 currentValue = estimatedTotalAssets();
 
-        IAngleStake(angleStake).getReward();
+        IAngleGauge(angleStake).claim_rewards();
 
         uint256 _tokensAvailable = IERC20(angleToken).balanceOf(address(this));
-        if(_tokensAvailable > 0){
-            _swap(_tokensAvailable, address(angleToken));
+        if (_tokensAvailable > 0) {
+            uint256 _tokensToGov =
+            _tokensAvailable.mul(percentKeep).div(_denominator);
+            if (_tokensToGov > 0) {
+                IERC20(angleToken).safeTransfer(treasury, _tokensToGov);
+            }
+            uint256 _tokensRemain = IERC20(angleToken).balanceOf(address(this));
+            _swap(_tokensRemain, address(angleToken));
         }
 
         uint256 afterValue = estimatedTotalAssets();
@@ -282,7 +291,7 @@ contract StrategyAngleUSDC is BaseStrategyInitializable {
             IAngle(angle).deposit(_wantAvailable,address(this),poolManager);
 
             uint256 sanBalance = balanceOfSanToken();
-            IAngleStake(angleStake).stake(sanBalance);
+            IAngleGauge(angleStake).deposit(sanBalance);
 
         }
     }
@@ -315,11 +324,20 @@ contract StrategyAngleUSDC is BaseStrategyInitializable {
 
         uint256 balanceOfWantBefore = balanceOfWant();
 
-        IAngleStake(angleStake).exit();
+
+        IAngleGauge(angleStake).claim_rewards();
+        IAngleGauge(angleStake).withdraw(IERC20(angleStake).balanceOf(address(this)));
 
         uint256 _tokensAvailable = IERC20(angleToken).balanceOf(address(this));
-        if(_tokensAvailable > 0){
-            _swap(_tokensAvailable, address(angleToken));
+        //uint256 _tokensAvailable = IERC20(fxs).balanceOf(address(this));
+        if (_tokensAvailable > 0) {
+            uint256 _tokensToGov =
+            _tokensAvailable.mul(percentKeep).div(_denominator);
+            if (_tokensToGov > 0) {
+                IERC20(angleToken).safeTransfer(treasury, _tokensToGov);
+            }
+            uint256 _tokensRemain = IERC20(angleToken).balanceOf(address(this));
+            _swap(_tokensRemain, address(angleToken));
         }
 
 
@@ -338,7 +356,7 @@ contract StrategyAngleUSDC is BaseStrategyInitializable {
         if (redepositAmt > 0) {
         IAngle(angle).deposit(redepositAmt,thisStrat,poolManager);
         sanAmount = balanceOfSanToken();
-        IAngleStake(angleStake).stake(sanAmount);
+        IAngleGauge(angleStake).deposit(sanAmount);
         }
 
         uint256 difference = balanceOfWant().sub(balanceOfWantBefore);
@@ -349,7 +367,8 @@ contract StrategyAngleUSDC is BaseStrategyInitializable {
     // transfers all tokens to new strategy
     function prepareMigration(address _newStrategy) internal override {
         // want is transferred by the base contract's migrate function
-        IAngleStake(angleStake).exit();
+        IAngleGauge(angleStake).claim_rewards();
+        IAngleGauge(angleStake).withdraw(IERC20(angleStake).balanceOf(address(this)));
 
         IERC20(sanToken).transfer(
             _newStrategy,
@@ -368,7 +387,7 @@ contract StrategyAngleUSDC is BaseStrategyInitializable {
     }
 
     function balanceOfStake() public view returns (uint256) {
-        return IAngleStake(angleStake).balanceOf(address(this));
+        return IERC20(angleStake).balanceOf(address(this));
     }
 
     function balanceOfSanToken() public view returns (uint256) {
@@ -398,6 +417,10 @@ contract StrategyAngleUSDC is BaseStrategyInitializable {
         refer = _refer;
     }
 
+    // where angleToken goes
+    function setTreasury(address _treasury) external onlyGovernance {
+        treasury = _treasury;
+    }
 
     // below for 0.4.3 upgrade
     function ethToWant(uint256 _amtInWei)

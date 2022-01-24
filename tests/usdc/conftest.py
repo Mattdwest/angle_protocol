@@ -115,6 +115,10 @@ def sanToken():
 def angleToken():
     yield Contract("0x31429d1856aD1377A8A0079410B297e1a9e214c2")
 
+@pytest.fixture
+def veAngleToken():
+    yield Contract("0x0C462Dbb9EC8cD1630f1728B2CFD2769d09f0dd5")
+
 #stable manager front
 @pytest.fixture
 def angle():
@@ -123,7 +127,7 @@ def angle():
 #usdc stake
 @pytest.fixture
 def angleStake():
-    yield Contract("0x2Fa1255383364F6e17Be6A6aC7A56C9aCD6850a3")
+    yield Contract("0x51fE22abAF4a26631b2913E417c0560D547797a7")
 
 
 @pytest.fixture
