@@ -87,4 +87,4 @@ def test_operation(
 
     assert sanToken.balanceOf(strategy) == 0
     assert sanToken.balanceOf(newstrategy) > 0
-    assert angleToken.balanceOf(newstrategy) > 0
+

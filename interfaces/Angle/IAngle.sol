@@ -30,4 +30,17 @@ interface IAngle {
 
     function withdraw(uint256 amount, address burner, address dest, address poolManager) external;
 
+
+    function collateralMap(address poolManager) external view returns (
+        address token,
+        address sanToken,
+        address perpetualManager,
+        address oracle,
+        uint256 stocksUsers,
+        uint256 sanRate,
+        uint256 collatBase,
+        uint256 slpData,
+        uint256 feeData
+    );
+
 }
