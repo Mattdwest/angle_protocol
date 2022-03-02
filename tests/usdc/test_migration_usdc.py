@@ -12,25 +12,25 @@ from brownie import StrategyAngleUSDC
 
 @pytest.mark.require_network("mainnet-fork")
 def test_operation(
-        chain,
-        vault,
-        strategy,
-        usdc,
-        usdc_liquidity,
-        gov,
-        rewards,
-        guardian,
-        strategist,
-        alice,
-        bob,
-        tinytim,
-        angleToken,
-        angle,
-        sanToken,
-        angle_liquidity,
-        angleStake,
-        poolManager,
-        newstrategy
+    chain,
+    vault,
+    strategy,
+    usdc,
+    usdc_liquidity,
+    gov,
+    rewards,
+    guardian,
+    strategist,
+    alice,
+    bob,
+    tinytim,
+    angleToken,
+    angle,
+    sanToken,
+    angle_liquidity,
+    angleStake,
+    poolManager,
+    newstrategy,
 ):
 
     # Funding and vault approvals
@@ -45,7 +45,7 @@ def test_operation(
     usdc.approve(vault, 1_000_000_000000, {"from": alice})
     usdc.approve(vault, 1_000_000_000000, {"from": tinytim})
 
-       # users deposit to vault
+    # users deposit to vault
     vault.deposit(1000_000_000, {"from": bob})
     vault.deposit(4000_000_000, {"from": alice})
     vault.deposit(10_000_000, {"from": tinytim})
@@ -72,13 +72,12 @@ def test_operation(
     pps_after_second_harvest = vault.pricePerShare()
     assert pps_after_second_harvest > pps_after_first_harvest
 
-
-    #6 hours for pricepershare to go up
-    #strategy.harvest({"from": gov})
-    #chain.sleep(3600 * 24 * 1)
-    #chain.mine(1)
-    #chain.sleep(3600 * 1)
-    #chain.mine(1)
+    # 6 hours for pricepershare to go up
+    # strategy.harvest({"from": gov})
+    # chain.sleep(3600 * 24 * 1)
+    # chain.mine(1)
+    # chain.sleep(3600 * 1)
+    # chain.mine(1)
 
     assert angleStake.balanceOf(newstrategy) == 0
 
@@ -87,4 +86,3 @@ def test_operation(
 
     assert sanToken.balanceOf(strategy) == 0
     assert sanToken.balanceOf(newstrategy) > 0
-

@@ -6,6 +6,7 @@ from brownie import config, Contract
 def shared_setup(fn_isolation):
     pass
 
+
 @pytest.fixture
 def gov(accounts):
     yield accounts[0]
@@ -71,6 +72,7 @@ def vault(pm, gov, rewards, guardian, management, usdc):
     vault.setManagement(management, {"from": gov})
     yield vault
 
+
 @pytest.fixture
 def strategy(
     strategist,
@@ -100,31 +102,36 @@ def strategy(
     vault.addStrategy(strategy, 10_000, 0, 2 ** 256 - 1, 1_000, {"from": gov})
     yield strategy
 
-#sushiswap router
+
+# sushiswap router
 @pytest.fixture
 def uni():
     yield Contract("0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F")
 
 
-#USDC sanToken
+# USDC sanToken
 @pytest.fixture
 def sanToken():
     yield Contract.from_explorer("0x9C215206Da4bf108aE5aEEf9dA7caD3352A36Dad")
+
 
 @pytest.fixture
 def angleToken():
     yield Contract("0x31429d1856aD1377A8A0079410B297e1a9e214c2")
 
+
 @pytest.fixture
 def veAngleToken():
     yield Contract("0x0C462Dbb9EC8cD1630f1728B2CFD2769d09f0dd5")
 
-#stable manager front
+
+# stable manager front
 @pytest.fixture
 def angle():
     yield Contract("0x5adDc89785D75C86aB939E9e15bfBBb7Fc086A87")
 
-#usdc stake
+
+# usdc stake
 @pytest.fixture
 def angleStake():
     yield Contract("0x51fE22abAF4a26631b2913E417c0560D547797a7")
@@ -137,19 +144,19 @@ def poolManager():
 
 @pytest.fixture
 def newstrategy(
-        strategist,
-        guardian,
-        keeper,
-        vault,
-        StrategyAngleUSDC,
-        gov,
-        sanToken,
-        angleToken,
-        uni,
-        angle,
-        angleStake,
-        poolManager,
-    ):
+    strategist,
+    guardian,
+    keeper,
+    vault,
+    StrategyAngleUSDC,
+    gov,
+    sanToken,
+    angleToken,
+    uni,
+    angle,
+    angleStake,
+    poolManager,
+):
     newstrategy = guardian.deploy(
         StrategyAngleUSDC,
         vault,
@@ -168,13 +175,12 @@ def newstrategy(
 def angle_liquidity(accounts):
     yield accounts.at("0x31429d1856aD1377A8A0079410B297e1a9e214c2", force=True)
 
+
 @pytest.fixture
 def fxs_liquidity(accounts):
     yield accounts.at("0xf977814e90da44bfa03b6295a0616a897441acec", force=True)
 
+
 @pytest.fixture
 def token_owner(accounts):
     yield accounts.at("0x8412ebf45bac1b340bbe8f318b928c466c4e39ca", force=True)
-
-
-

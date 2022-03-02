@@ -12,24 +12,24 @@ from brownie import StrategyAngleUSDC
 
 @pytest.mark.require_network("mainnet-fork")
 def test_operation(
-        chain,
-        vault,
-        strategy,
-        usdc,
-        usdc_liquidity,
-        gov,
-        rewards,
-        guardian,
-        strategist,
-        alice,
-        bob,
-        tinytim,
-        angleToken,
-        angle,
-        sanToken,
-        angle_liquidity,
-        angleStake,
-        poolManager
+    chain,
+    vault,
+    strategy,
+    usdc,
+    usdc_liquidity,
+    gov,
+    rewards,
+    guardian,
+    strategist,
+    alice,
+    bob,
+    tinytim,
+    angleToken,
+    angle,
+    sanToken,
+    angle_liquidity,
+    angleStake,
+    poolManager,
 ):
 
     # Funding and vault approvals
@@ -82,17 +82,17 @@ def test_operation(
     vault.withdraw(alice_vault_balance, alice, 75, {"from": alice})
     assert usdc.balanceOf(alice) > 0
     assert usdc.balanceOf(bob) == 0
-    #assert frax.balanceOf(strategy) > 0
+    # assert frax.balanceOf(strategy) > 0
 
     bob_vault_balance = vault.balanceOf(bob)
     vault.withdraw(bob_vault_balance, bob, 75, {"from": bob})
     assert usdc.balanceOf(bob) > 0
-    #assert usdc.balanceOf(strategy) == 0
+    # assert usdc.balanceOf(strategy) == 0
 
     tt_vault_balance = vault.balanceOf(tinytim)
     vault.withdraw(tt_vault_balance, tinytim, 75, {"from": tinytim})
     assert usdc.balanceOf(tinytim) > 0
-    #assert usdc.balanceOf(strategy) == 0
+    # assert usdc.balanceOf(strategy) == 0
 
     # We should have made profit
     assert vault.pricePerShare() > 1e6
