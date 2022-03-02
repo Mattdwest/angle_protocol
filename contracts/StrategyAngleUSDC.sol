@@ -88,6 +88,7 @@ contract StrategyAngleUSDC is BaseStrategyInitializable {
 
         percentKeep = 1000;
         treasury = address(0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde);
+        healthCheck = 0xDDCea799fF1699e98EDF118e0629A974Df7DF012;
 
 
         IERC20(want).safeApprove(angle, uint256(-1));
@@ -327,7 +328,7 @@ contract StrategyAngleUSDC is BaseStrategyInitializable {
 
 
         //IAngleGauge(angleStake).claim_rewards();
-        IAngleGauge(angleStake).withdraw(IERC20(angleStake).balanceOf(address(this)));
+        IAngleGauge(angleStake).withdraw(balanceOfStake());
 
         //address thisStrat = address(this);
         uint256 sanAmount = balanceOfSanToken();
