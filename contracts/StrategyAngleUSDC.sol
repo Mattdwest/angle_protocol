@@ -10,7 +10,7 @@ import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
-import {BaseStrategyInitializable} from "@yearn/contracts/BaseStrategy.sol";
+import {BaseStrategy} from "@yearn/contracts/BaseStrategy.sol";
 
 import "../../interfaces/curve/ICurve.sol";
 import "../../interfaces/Angle/IAngle.sol";
@@ -22,11 +22,15 @@ interface IName {
     function name() external view returns (string memory);
 }
 
-contract StrategyAngleUSDC is BaseStrategyInitializable {
+contract StrategyAngleUSDC is BaseStrategy {
     using SafeERC20 for IERC20;
     using Address for address;
     using SafeMath for uint256;
     using SafeMath for uint128;
+
+    event Cloned(address indexed clone);
+
+    bool public isOriginal = true;
 
     // variables for determining how much governance token to hold for voting rights
     uint256 public constant _denominator = 10000;
@@ -50,9 +54,9 @@ contract StrategyAngleUSDC is BaseStrategyInitializable {
         address _angle,
         address _angleStake,
         address _poolManager
-    ) public BaseStrategyInitializable(_vault) {
+    ) public BaseStrategy(_vault) {
         // Constructor should initialize local variables
-        _initializeThis(
+        _initializeStrategy(
             _sanToken,
             _angleToken,
             _unirouter,
@@ -62,8 +66,9 @@ contract StrategyAngleUSDC is BaseStrategyInitializable {
         );
     }
 
-    // initializetime
-    function _initializeThis(
+    // Cloning & initialization code adapted from https://github.com/yearn/yearn-vaults/blob/43a0673ab89742388369bc0c9d1f321aa7ea73f6/contracts/BaseStrategy.sol#L866
+
+    function _initializeStrategy(
         address _sanToken,
         address _angleToken,
         address _unirouter,
@@ -71,11 +76,6 @@ contract StrategyAngleUSDC is BaseStrategyInitializable {
         address _angleStake,
         address _poolManager
     ) internal {
-        //require(
-        //    address(sanToken) == address(0),
-        //    "StrategyAngleUSDC already initialized"
-        //);
-
         sanToken = _sanToken;
         angleToken = _angleToken;
         unirouter = _unirouter;
@@ -94,30 +94,6 @@ contract StrategyAngleUSDC is BaseStrategyInitializable {
         IERC20(angleToken).safeApprove(unirouter, uint256(-1));
     }
 
-    function _initialize(
-        address _vault,
-        address _strategist,
-        address _rewards,
-        address _keeper,
-        address _sanToken,
-        address _angleToken,
-        address _unirouter,
-        address _angle,
-        address _angleStake,
-        address _poolManager
-    ) internal {
-        // Parent initialize contains the double initialize check
-        super._initialize(_vault, _strategist, _rewards, _keeper);
-        _initializeThis(
-            _sanToken,
-            _angleToken,
-            _unirouter,
-            _angle,
-            _angleStake,
-            _poolManager
-        );
-    }
-
     function initialize(
         address _vault,
         address _strategist,
@@ -130,11 +106,8 @@ contract StrategyAngleUSDC is BaseStrategyInitializable {
         address _angleStake,
         address _poolManager
     ) external {
-        _initialize(
-            _vault,
-            _strategist,
-            _rewards,
-            _keeper,
+        _initialize(_vault, _strategist, _rewards, _keeper);
+        _initializeStrategy(
             _sanToken,
             _angleToken,
             _unirouter,
@@ -156,7 +129,7 @@ contract StrategyAngleUSDC is BaseStrategyInitializable {
         address _angleStake,
         address _poolManager
     ) external returns (address newStrategy) {
-        // Copied from https://github.com/optionality/clone-factory/blob/master/contracts/CloneFactory.sol
+        require(isOriginal, "!clone");
         bytes20 addressBytes = bytes20(address(this));
 
         assembly {
@@ -186,6 +159,8 @@ contract StrategyAngleUSDC is BaseStrategyInitializable {
             _angleStake,
             _poolManager
         );
+
+        emit Cloned(newStrategy);
     }
 
     function name() external view override returns (string memory) {

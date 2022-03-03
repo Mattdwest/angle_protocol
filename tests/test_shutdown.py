@@ -1,63 +1,87 @@
-# TODO: Add tests that show proper operation of this strategy through "emergencyExit"
-#       Make sure to demonstrate the "worst case losses" as well as the time it takes
-
-from brownie import ZERO_ADDRESS
+# TODO: Add tests here that show the normal operation of this strategy
+#       Suggestions to include:
+#           - strategy loading and unloading (via Vault addStrategy/revokeStrategy)
+#           - change in loading (from low to high and high to low)
+#           - strategy operation at different loading levels (anticipated and "extreme")
 import pytest
 
+from brownie import Wei, accounts, Contract, config
+from brownie import StrategyAngleUSDC
 
-def test_vault_shutdown_can_withdraw(
-    chain, token, vault, strategy, user, amount, RELATIVE_APPROX
+
+@pytest.mark.require_network("mainnet-fork")
+def test_shutdown(
+    chain,
+    vault,
+    strategy,
+    token,
+    gov,
+    strategist,
+    alice,
+    alice_amount,
+    bob,
+    bob_amount,
+    tinytim,
+    tinytim_amount,
+    angleStake,
 ):
-    ## Deposit in Vault
-    token.approve(vault.address, amount, {"from": user})
-    vault.deposit(amount, {"from": user})
-    assert token.balanceOf(vault.address) == amount
+    token.approve(vault, 1_000_000_000_000, {"from": alice})
+    token.approve(vault, 1_000_000_000_000, {"from": bob})
+    token.approve(vault, 1_000_000_000_000, {"from": tinytim})
 
-    if token.balanceOf(user) > 0:
-        token.transfer(ZERO_ADDRESS, token.balanceOf(user), {"from": user})
+    # users deposit to vault
+    vault.deposit(alice_amount, {"from": alice})
+    vault.deposit(bob_amount, {"from": bob})
+    vault.deposit(tinytim_amount, {"from": tinytim})
 
-    # Harvest 1: Send funds through the strategy
-    strategy.harvest()
-    chain.sleep(3600 * 7)
+    vault.setManagementFee(0, {"from": gov})
+    vault.setPerformanceFee(0, {"from": gov})
+
+    # First harvest
+    strategy.harvest({"from": strategist})
+
+    assert angleStake.balanceOf(strategy) > 0
+    chain.sleep(3600 * 24 * 1)
     chain.mine(1)
-    assert pytest.approx(strategy.estimatedTotalAssets(), rel=RELATIVE_APPROX) == amount
+    chain.sleep(3600 * 1)
+    chain.mine(1)
+    pps_after_first_harvest = vault.pricePerShare()
 
-    ## Set Emergency
-    vault.setEmergencyShutdown(True)
+    # 6 hours for pricepershare to go up, there should be profit
+    strategy.harvest({"from": strategist})
+    chain.sleep(3600 * 24 * 1)
+    chain.mine(1)
+    chain.sleep(3600 * 1)
+    chain.mine(1)
+    pps_after_second_harvest = vault.pricePerShare()
+    assert pps_after_second_harvest > pps_after_first_harvest
 
-    ## Withdraw (does it work, do you get what you expect)
-    vault.withdraw({"from": user})
-
-    assert pytest.approx(token.balanceOf(user), rel=RELATIVE_APPROX) == amount
-
-
-def test_basic_shutdown(
-    chain, token, vault, strategy, user, strategist, amount, RELATIVE_APPROX
-):
-    # Deposit to the vault
-    token.approve(vault.address, amount, {"from": user})
-    vault.deposit(amount, {"from": user})
-    assert token.balanceOf(vault.address) == amount
-
-    # Harvest 1: Send funds through the strategy
-    strategy.harvest()
-    chain.mine(100)
-    assert pytest.approx(strategy.estimatedTotalAssets(), rel=RELATIVE_APPROX) == amount
-
-    ## Earn interest
-    chain.sleep(3600 * 24 * 1)  ## Sleep 1 day
+    # 6 hours for pricepershare to go up
+    strategy.harvest({"from": strategist})
+    chain.sleep(3600 * 24 * 1)
+    chain.mine(1)
+    chain.sleep(3600 * 1)
     chain.mine(1)
 
-    # Harvest 2: Realize profit
-    strategy.harvest()
-    chain.sleep(3600 * 6)  # 6 hrs needed for profits to unlock
+    strategy.setEmergencyExit({"from": gov})
+    strategy.harvest({"from": strategist})
     chain.mine(1)
 
-    ## Set emergency
-    strategy.setEmergencyExit({"from": strategist})
+    alice_vault_balance = vault.balanceOf(alice)
+    vault.withdraw(alice_vault_balance, alice, 75, {"from": alice})
+    assert token.balanceOf(alice) > 0
+    assert token.balanceOf(bob) == 0
+    # assert frax.balanceOf(strategy) > 0
 
-    strategy.harvest()  ## Remove funds from strategy
+    bob_vault_balance = vault.balanceOf(bob)
+    vault.withdraw(bob_vault_balance, bob, 75, {"from": bob})
+    assert token.balanceOf(bob) > 0
+    # assert usdc.balanceOf(strategy) == 0
 
-    assert token.balanceOf(strategy) == 0
-    assert token.balanceOf(vault) >= amount  ## The vault has all funds
-    ## NOTE: May want to tweak this based on potential loss during migration
+    tt_vault_balance = vault.balanceOf(tinytim)
+    vault.withdraw(tt_vault_balance, tinytim, 75, {"from": tinytim})
+    assert token.balanceOf(tinytim) > 0
+    # assert usdc.balanceOf(strategy) == 0
+
+    # We should have made profit
+    # assert vault.pricePerShare() > 1e6
