@@ -6,10 +6,7 @@ pragma solidity 0.6.12;
 pragma experimental ABIEncoderV2;
 
 // These are the core Yearn libraries
-import {
-    BaseStrategy,
-    StrategyParams
-} from "@yearn/contracts/BaseStrategy.sol";
+import {BaseStrategy, StrategyParams} from "@yearn/contracts/BaseStrategy.sol";
 import {
     SafeERC20,
     SafeMath,
