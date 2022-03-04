@@ -10,13 +10,13 @@ import "@openzeppelin/contracts/math/Math.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
-import {BaseStrategy} from "@yearn/contracts/BaseStrategy.sol";
+import {BaseStrategy} from "@yearnvaults/contracts/BaseStrategy.sol";
 
-import "../../interfaces/curve/ICurve.sol";
-import "../../interfaces/Angle/IAngle.sol";
-import "../../interfaces/Angle/IAngleStake.sol";
-import "../../interfaces/Angle/IAngleGauge.sol";
-import "../../interfaces/uniswap/IUni.sol";
+import "../interfaces/curve/ICurve.sol";
+import "../interfaces/Angle/IAngle.sol";
+import "../interfaces/Angle/IAngleStake.sol";
+import "../interfaces/Angle/IAngleGauge.sol";
+import "../interfaces/uniswap/IUni.sol";
 
 interface IName {
     function name() external view returns (string memory);
