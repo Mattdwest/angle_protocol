@@ -249,11 +249,14 @@ contract StrategyAngleUSDC is BaseStrategy {
         // Invest the rest of the want
         uint256 _wantAvailable = _balanceOfWant.sub(_debtOutstanding);
         if (_wantAvailable > 0) {
-            //deposit for sanToken
+            // deposit for sanToken
             depositToStableMaster(_wantAvailable);
+        }
 
-            uint256 sanBalance = balanceOfSanToken();
-            IAngleGauge(angleStake).deposit(sanBalance);
+        // Stake any san tokens, whether they originated through the above deposit or some other means (e.g. migration)
+        uint256 _sanTokenBalance = balanceOfSanToken();
+        if (_sanTokenBalance > 0) {
+            IAngleGauge(angleStake).deposit(_sanTokenBalance);
         }
     }
 

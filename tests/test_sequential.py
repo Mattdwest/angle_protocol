@@ -25,6 +25,8 @@ def test_sequential(
     tinytim,
     tinytim_amount,
     angleStake,
+    utils,
+    angle,
 ):
     token.approve(vault, 1_000_000_000_000, {"from": bob})
     token.approve(vault, 1_000_000_000_000, {"from": alice})
@@ -42,26 +44,14 @@ def test_sequential(
     strategy.harvest({"from": strategist})
 
     assert angleStake.balanceOf(strategy) > 0
-    chain.sleep(3600 * 24 * 2)
-    chain.mine(1)
-    chain.sleep(3600 * 1)
-    chain.mine(1)
-    pps_after_first_harvest = vault.pricePerShare()
+    assets_at_t = strategy.estimatedTotalAssets()
 
-    # 6 hours for pricepershare to go up, there should be profit
-    strategy.harvest({"from": gov})
-    chain.sleep(3600 * 24 * 2)
-    chain.mine(1)
-    chain.sleep(3600 * 1)
-    chain.mine(1)
-    pps_after_second_harvest = vault.pricePerShare()
-    assert pps_after_second_harvest > pps_after_first_harvest
+    utils.mock_angle_slp_profits(angle, assets_at_t / 100)
 
-    # 6 hours for pricepershare to go up
+    assets_at_t_plus_one = strategy.estimatedTotalAssets()
+    assert assets_at_t_plus_one > assets_at_t
+
     strategy.harvest({"from": strategist})
-    chain.sleep(3600 * 24 * 2)
-    chain.mine(1)
-    chain.sleep(3600 * 1)
     chain.mine(1)
 
     alice_vault_balance = vault.balanceOf(alice)
@@ -79,6 +69,3 @@ def test_sequential(
     vault.withdraw(tt_vault_balance, tinytim, 75, {"from": tinytim})
     assert token.balanceOf(tinytim) > 0
     # assert usdc.balanceOf(strategy) == 0
-
-    # We should have made profit
-    assert vault.pricePerShare() > 1e6

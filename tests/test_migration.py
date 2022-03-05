@@ -31,6 +31,7 @@ def test_migration(
     angleStake,
     poolManager,
     newstrategy,
+    utils,
 ):
     token.approve(vault, 1_000_000_000_000, {"from": alice})
     token.approve(vault, 1_000_000_000_000, {"from": bob})
@@ -45,31 +46,15 @@ def test_migration(
     vault.setPerformanceFee(0, {"from": gov})
 
     # First harvest
-    chain.sleep(1)
     strategy.harvest({"from": strategist})
 
     assert angleStake.balanceOf(strategy) > 0
-    chain.sleep(3600 * 24 * 1)
-    chain.mine(1)
-    chain.sleep(3600 * 1)
-    chain.mine(1)
-    pps_after_first_harvest = vault.pricePerShare()
+    assets_at_t = strategy.estimatedTotalAssets()
 
-    # 6 hours for pricepershare to go up, there should be profit
-    strategy.harvest({"from": strategist})
-    chain.sleep(3600 * 24 * 1)
-    chain.mine(1)
-    chain.sleep(3600 * 1)
-    chain.mine(1)
-    pps_after_second_harvest = vault.pricePerShare()
-    assert pps_after_second_harvest > pps_after_first_harvest
+    utils.mock_angle_slp_profits(angle, assets_at_t / 100)
 
-    # 6 hours for pricepershare to go up
-    # strategy.harvest({"from": gov})
-    # chain.sleep(3600 * 24 * 1)
-    # chain.mine(1)
-    # chain.sleep(3600 * 1)
-    # chain.mine(1)
+    assets_at_t_plus_one = strategy.estimatedTotalAssets()
+    assert assets_at_t_plus_one > assets_at_t
 
     assert angleStake.balanceOf(newstrategy) == 0
 
@@ -78,3 +63,7 @@ def test_migration(
 
     assert sanToken.balanceOf(strategy) == 0
     assert sanToken.balanceOf(newstrategy) > 0
+
+    newstrategy.harvest({"from": strategist})
+    assert sanToken.balanceOf(newstrategy) == 0
+    assert angleStake.balanceOf(newstrategy) > 0

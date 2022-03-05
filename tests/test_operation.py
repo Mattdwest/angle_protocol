@@ -10,137 +10,136 @@ from brownie import Wei, accounts, Contract, config, ZERO_ADDRESS
 from brownie import StrategyAngleUSDC
 
 
-# @pytest.mark.require_network("mainnet-fork")
-# def test_operation(
-#     chain,
-#     vault,
-#     strategy,
-#     token,
-#     gov,
-#     strategist,
-#     alice,
-#     alice_amount,
-#     bob,
-#     bob_amount,
-#     tinytim,
-#     tinytim_amount,
-#     sanToken,
-#     angleStake,
-#     utils,
-#     angle
-# ):
-#     token.approve(vault, 1_000_000_000_000, {"from": alice})
-#     token.approve(vault, 1_000_000_000_000, {"from": bob})
-#     token.approve(vault, 1_000_000_000_000, {"from": tinytim})
+@pytest.mark.require_network("mainnet-fork")
+def test_operation(
+    chain,
+    vault,
+    strategy,
+    token,
+    gov,
+    strategist,
+    alice,
+    alice_amount,
+    bob,
+    bob_amount,
+    tinytim,
+    tinytim_amount,
+    sanToken,
+    angleStake,
+    utils,
+    angle,
+):
+    token.approve(vault, 1_000_000_000_000, {"from": alice})
+    token.approve(vault, 1_000_000_000_000, {"from": bob})
+    token.approve(vault, 1_000_000_000_000, {"from": tinytim})
 
-#     # users deposit to vault
-#     vault.deposit(alice_amount, {"from": alice})
-#     vault.deposit(bob_amount, {"from": bob})
-#     vault.deposit(tinytim_amount, {"from": tinytim})
+    # users deposit to vault
+    vault.deposit(alice_amount, {"from": alice})
+    vault.deposit(bob_amount, {"from": bob})
+    vault.deposit(tinytim_amount, {"from": tinytim})
 
-#     vault.setManagementFee(0, {"from": gov})
-#     vault.setPerformanceFee(0, {"from": gov})
+    vault.setManagementFee(0, {"from": gov})
+    vault.setPerformanceFee(0, {"from": gov})
 
-#     # usdc.transferFrom(usdc_liquidity, strategy, 100_000000, {"from": usdc_liquidity})
+    assert sanToken.balanceOf(strategy) == 0
 
-#     assert sanToken.balanceOf(strategy) == 0
+    # First harvest
+    strategy.harvest({"from": strategist})
 
-#     # First harvest
-#     strategy.harvest({"from": strategist})
+    assert angleStake.balanceOf(strategy) > 0
+    assets_at_t = strategy.estimatedTotalAssets()
 
-#     assert angleStake.balanceOf(strategy) > 0
-#     assets_at_t = strategy.estimatedTotalAssets()
+    utils.mock_angle_slp_profits(angle, assets_at_t / 100)
 
-#     utils.mock_angle_slp_profits(angle, assets_at_t / 100)
+    assets_at_t_plus_one = strategy.estimatedTotalAssets()
+    assert assets_at_t_plus_one > assets_at_t
 
-#     assets_at_t_plus_one = strategy.estimatedTotalAssets()
-#     assert assets_at_t_plus_one > assets_at_t
+    strategy.harvest({"from": strategist})
+    chain.mine(1)
 
-#     # 6 hours for pricepershare to go up
-#     strategy.harvest({"from": gov})
-#     chain.sleep(3600 * 24 * 1)
-#     chain.mine(1)
-#     chain.sleep(3600 * 1)
-#     chain.mine(1)
+    alice_vault_balance = vault.balanceOf(alice)
+    vault.withdraw(alice_vault_balance, alice, 75, {"from": alice})
+    assert token.balanceOf(alice) > 0
+    assert token.balanceOf(bob) == 0
+    # assert frax.balanceOf(strategy) > 0
 
-#     alice_vault_balance = vault.balanceOf(alice)
-#     vault.withdraw(alice_vault_balance, alice, 75, {"from": alice})
-#     assert token.balanceOf(alice) > 0
-#     assert token.balanceOf(bob) == 0
-#     # assert frax.balanceOf(strategy) > 0
+    # 6 hours for pricepershare to go up
+    strategy.harvest({"from": strategist})
+    chain.sleep(3600 * 24 * 1)
+    chain.mine(1)
+    chain.sleep(3600 * 1)
+    chain.mine(1)
 
-#     # 6 hours for pricepershare to go up
-#     strategy.harvest({"from": strategist})
-#     chain.sleep(3600 * 24 * 1)
-#     chain.mine(1)
-#     chain.sleep(3600 * 1)
-#     chain.mine(1)
+    bob_vault_balance = vault.balanceOf(bob)
+    vault.withdraw(bob_vault_balance, bob, 75, {"from": bob})
+    assert token.balanceOf(bob) > 0
+    # assert usdc.balanceOf(strategy) == 0
 
-#     bob_vault_balance = vault.balanceOf(bob)
-#     vault.withdraw(bob_vault_balance, bob, 75, {"from": bob})
-#     assert token.balanceOf(bob) > 0
-#     # assert usdc.balanceOf(strategy) == 0
+    # 6 hours for pricepershare to go up
+    strategy.harvest({"from": strategist})
+    chain.sleep(3600 * 24 * 1)
+    chain.mine(1)
+    chain.sleep(3600 * 1)
+    chain.mine(1)
 
-#     # 6 hours for pricepershare to go up
-#     strategy.harvest({"from": strategist})
-#     chain.sleep(3600 * 24 * 1)
-#     chain.mine(1)
-#     chain.sleep(3600 * 1)
-#     chain.mine(1)
-
-#     tt_vault_balance = vault.balanceOf(tinytim)
-#     vault.withdraw(tt_vault_balance, tinytim, 75, {"from": tinytim})
-#     assert token.balanceOf(tinytim) > 0
-#     # assert usdc.balanceOf(strategy) == 0
+    tt_vault_balance = vault.balanceOf(tinytim)
+    vault.withdraw(tt_vault_balance, tinytim, 75, {"from": tinytim})
+    assert token.balanceOf(tinytim) > 0
+    # assert usdc.balanceOf(strategy) == 0
 
 
-# @pytest.mark.require_network("mainnet-fork")
-# def test_lossy_strat(
-#     token,
-#     vault,
-#     alice,
-#     alice_amount,
-#     strategy,
-#     sanToken,
-#     strategist,
-#     angleStake,
-#     angle,
-#     gov,
-#     BASE_PARAMS,
-#     angle_fee_manager,
-#     utils
-# ):
-#     token.approve(vault, 1_000_000_000_000, {"from": alice})
+@pytest.mark.require_network("mainnet-fork")
+def test_lossy_strat(
+    token,
+    vault,
+    alice,
+    alice_amount,
+    strategy,
+    sanToken,
+    strategist,
+    angleStake,
+    angle,
+    gov,
+    BASE_PARAMS,
+    angle_fee_manager,
+    utils,
+):
+    token.approve(vault, 1_000_000_000_000, {"from": alice})
 
-#     vault.deposit(alice_amount, {"from": alice})
+    vault.deposit(alice_amount, {"from": alice})
 
-#     assert sanToken.balanceOf(strategy) == 0
+    assert sanToken.balanceOf(strategy) == 0
 
-#     vault.setManagementFee(0, {"from": gov})
-#     vault.setPerformanceFee(0, {"from": gov})
+    vault.setManagementFee(0, {"from": gov})
+    vault.setPerformanceFee(0, {"from": gov})
 
-#     # First harvest
-#     strategy.harvest({"from": strategist})
+    # First harvest
+    strategy.harvest({"from": strategist})
 
-#     assert angleStake.balanceOf(strategy) > 0
-#     assets_at_t = strategy.estimatedTotalAssets()
+    assert angleStake.balanceOf(strategy) > 0
+    assets_at_t = strategy.estimatedTotalAssets()
 
-#     utils.mock_angle_slp_profits(angle, assets_at_t / 100)
+    utils.mock_angle_slp_profits(angle, assets_at_t / 100)
 
-#     assets_at_t_plus_one = strategy.estimatedTotalAssets()
-#     assert assets_at_t_plus_one > assets_at_t
+    assets_at_t_plus_one = strategy.estimatedTotalAssets()
+    assert assets_at_t_plus_one > assets_at_t
 
-#     # As a technique to simulate losses, we increase slippage
-#     angle.setFeeKeeper(BASE_PARAMS, BASE_PARAMS, BASE_PARAMS / 100, 0, {"from": angle_fee_manager}) # set SLP slippage to 1%
+    # As a technique to simulate losses, we increase slippage
+    angle.setFeeKeeper(
+        BASE_PARAMS, BASE_PARAMS, BASE_PARAMS / 100, 0, {"from": angle_fee_manager}
+    )  # set SLP slippage to 1%
 
-#     strategy.setEmergencyExit({"from": gov}) # this will pull the assets out of angle, so we'll feel the slippage
-#     strategy.setDoHealthCheck(False, {"from": gov})
-#     strategy.harvest({"from": gov})
+    strategy.setEmergencyExit(
+        {"from": gov}
+    )  # this will pull the assets out of angle, so we'll feel the slippage
+    strategy.setDoHealthCheck(False, {"from": gov})
+    strategy.harvest({"from": gov})
 
-#     vault.withdraw({"from": alice})
+    vault.withdraw({"from": alice})
 
-#     assert token.balanceOf(alice) < assets_at_t_plus_one
-#     assert token.balanceOf(alice) < alice_amount
+    assert token.balanceOf(alice) < assets_at_t_plus_one
+    assert token.balanceOf(alice) < alice_amount
+
 
 # In this situation, we incur slippage on the exit but the ANGLE rewards should compensate for this
 @pytest.mark.require_network("mainnet-fork")
@@ -193,8 +192,8 @@ def test_almost_lossy_strat(
 
     # As a technique to simulate losses, we increase slippage
     angle.setFeeKeeper(
-        BASE_PARAMS, BASE_PARAMS, BASE_PARAMS / 1000, 0, {"from": angle_fee_manager}
-    )  # set SLP slippage to 0.01% (a bip)
+        BASE_PARAMS, BASE_PARAMS, BASE_PARAMS / 10000, 0, {"from": angle_fee_manager}
+    )  # set SLP slippage to 0.001% (one tenth of a bip)
 
     vault.withdraw({"from": alice})
 
