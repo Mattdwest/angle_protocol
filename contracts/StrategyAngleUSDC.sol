@@ -250,7 +250,7 @@ contract StrategyAngleUSDC is BaseStrategy {
         uint256 _wantAvailable = _balanceOfWant.sub(_debtOutstanding);
         if (_wantAvailable > 0) {
             //deposit for sanToken
-            IStableMaster(angle).deposit(_wantAvailable, address(this), poolManager);
+            depositToStableMaster(_wantAvailable);
 
             uint256 sanBalance = balanceOfSanToken();
             IAngleGauge(angleStake).deposit(sanBalance);
@@ -303,7 +303,7 @@ contract StrategyAngleUSDC is BaseStrategy {
         uint256 redepositAmt = balanceOfWantAfter.sub(_amount);
 
         if (redepositAmt > 0) {
-            IStableMaster(angle).deposit(redepositAmt, address(this), poolManager);
+            depositToStableMaster(redepositAmt);
             sanAmount = balanceOfSanToken();
             IAngleGauge(angleStake).deposit(sanAmount);
         }
@@ -329,26 +329,6 @@ contract StrategyAngleUSDC is BaseStrategy {
             _newStrategy,
             IERC20(angleToken).balanceOf(address(this))
         );
-    }
-
-    // returns balance of want token
-    function balanceOfWant() public view returns (uint256) {
-        return want.balanceOf(address(this));
-    }
-
-    function balanceOfStake() public view returns (uint256) {
-        return IERC20(angleStake).balanceOf(address(this));
-    }
-
-    function balanceOfSanToken() public view returns (uint256) {
-        return IERC20(sanToken).balanceOf(address(this));
-    }
-
-    function valueOfSanToken() public view returns (uint256) {
-        uint256 balance = balanceOfSanToken();
-        (, , , , , uint256 sanRate, , , ) =
-            IStableMaster(angle).collateralMap(poolManager);
-        return balance.mul(sanRate).div(1e18);
     }
 
     function valueOfStake() public view returns (uint256) {
@@ -412,5 +392,30 @@ contract StrategyAngleUSDC is BaseStrategy {
     {
         //shouldn't matter, logic is already in liquidatePosition
         (_amountFreed, ) = liquidatePosition(type(uint256).max);
+    }
+
+    // ----------------- SUPPORT & UTILITY FUNCTIONS ----------
+
+    function balanceOfWant() public view returns (uint256) {
+        return want.balanceOf(address(this));
+    }
+
+    function balanceOfStake() public view returns (uint256) {
+        return IERC20(angleStake).balanceOf(address(this));
+    }
+
+    function balanceOfSanToken() public view returns (uint256) {
+        return IERC20(sanToken).balanceOf(address(this));
+    }
+
+    function valueOfSanToken() public view returns (uint256) {
+        uint256 balance = balanceOfSanToken();
+        (, , , , , uint256 sanRate, , , ) =
+            IStableMaster(angle).collateralMap(poolManager);
+        return balance.mul(sanRate).div(1e18);
+    }
+
+    function depositToStableMaster(uint256 _amount) internal {
+        IStableMaster(angle).deposit(_amount, address(this), poolManager);
     }
 }
