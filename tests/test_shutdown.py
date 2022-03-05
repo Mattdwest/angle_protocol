@@ -24,6 +24,10 @@ def test_shutdown(
     tinytim,
     tinytim_amount,
     angleStake,
+    utils,
+    angle,
+    BASE_PARAMS,
+    angle_fee_manager
 ):
     token.approve(vault, 1_000_000_000_000, {"from": alice})
     token.approve(vault, 1_000_000_000_000, {"from": bob})
@@ -37,32 +41,16 @@ def test_shutdown(
     vault.setManagementFee(0, {"from": gov})
     vault.setPerformanceFee(0, {"from": gov})
 
-    # First harvest
     strategy.harvest({"from": strategist})
 
     assert angleStake.balanceOf(strategy) > 0
-    chain.sleep(3600 * 24 * 1)
-    chain.mine(1)
-    chain.sleep(3600 * 1)
-    chain.mine(1)
-    pps_after_first_harvest = vault.pricePerShare()
+    assets_at_t = strategy.estimatedTotalAssets()
 
-    # 6 hours for pricepershare to go up, there should be profit
-    strategy.harvest({"from": strategist})
-    chain.sleep(3600 * 24 * 1)
-    chain.mine(1)
-    chain.sleep(3600 * 1)
-    chain.mine(1)
-    pps_after_second_harvest = vault.pricePerShare()
-    assert pps_after_second_harvest > pps_after_first_harvest
+    utils.mock_angle_slp_profits(angle, assets_at_t / 100)
 
-    # 6 hours for pricepershare to go up
-    strategy.harvest({"from": strategist})
-    chain.sleep(3600 * 24 * 1)
-    chain.mine(1)
-    chain.sleep(3600 * 1)
-    chain.mine(1)
-
+    assets_at_t_plus_one = strategy.estimatedTotalAssets()
+    assert assets_at_t_plus_one > assets_at_t
+    
     strategy.setEmergencyExit({"from": gov})
     strategy.harvest({"from": strategist})
     chain.mine(1)

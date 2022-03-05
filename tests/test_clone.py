@@ -42,8 +42,8 @@ def test_clone(
     vault.migrateStrategy(strategy.address, cloned_strategy.address, {"from": gov})
     strategy = cloned_strategy
 
-    token.approve(vault, 1_000_000_000_000, {"from": bob})
     token.approve(vault, 1_000_000_000_000, {"from": alice})
+    token.approve(vault, 1_000_000_000_000, {"from": bob})
     token.approve(vault, 1_000_000_000_000, {"from": tinytim})
 
     # users deposit to vault
