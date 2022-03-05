@@ -24,10 +24,10 @@ def test_operation(
     bob_amount,
     tinytim,
     tinytim_amount,
-    sanToken,
-    angleStake,
+    san_token,
+    san_token_gauge,
     utils,
-    angle,
+    angle_stable_master,
 ):
     token.approve(vault, 1_000_000_000_000, {"from": alice})
     token.approve(vault, 1_000_000_000_000, {"from": bob})
@@ -41,15 +41,15 @@ def test_operation(
     vault.setManagementFee(0, {"from": gov})
     vault.setPerformanceFee(0, {"from": gov})
 
-    assert sanToken.balanceOf(strategy) == 0
+    assert san_token.balanceOf(strategy) == 0
 
     # First harvest
     strategy.harvest({"from": strategist})
 
-    assert angleStake.balanceOf(strategy) > 0
+    assert san_token_gauge.balanceOf(strategy) > 0
     assets_at_t = strategy.estimatedTotalAssets()
 
-    utils.mock_angle_slp_profits(angle, assets_at_t / 100)
+    utils.mock_angle_slp_profits(angle_stable_master, assets_at_t / 100)
 
     assets_at_t_plus_one = strategy.estimatedTotalAssets()
     assert assets_at_t_plus_one > assets_at_t
@@ -95,10 +95,10 @@ def test_lossy_strat(
     alice,
     alice_amount,
     strategy,
-    sanToken,
+    san_token,
     strategist,
-    angleStake,
-    angle,
+    san_token_gauge,
+    angle_stable_master,
     gov,
     BASE_PARAMS,
     angle_fee_manager,
@@ -108,7 +108,7 @@ def test_lossy_strat(
 
     vault.deposit(alice_amount, {"from": alice})
 
-    assert sanToken.balanceOf(strategy) == 0
+    assert san_token.balanceOf(strategy) == 0
 
     vault.setManagementFee(0, {"from": gov})
     vault.setPerformanceFee(0, {"from": gov})
@@ -116,16 +116,16 @@ def test_lossy_strat(
     # First harvest
     strategy.harvest({"from": strategist})
 
-    assert angleStake.balanceOf(strategy) > 0
+    assert san_token_gauge.balanceOf(strategy) > 0
     assets_at_t = strategy.estimatedTotalAssets()
 
-    utils.mock_angle_slp_profits(angle, assets_at_t / 100)
+    utils.mock_angle_slp_profits(angle_stable_master, assets_at_t / 100)
 
     assets_at_t_plus_one = strategy.estimatedTotalAssets()
     assert assets_at_t_plus_one > assets_at_t
 
     # As a technique to simulate losses, we increase slippage
-    angle.setFeeKeeper(
+    angle_stable_master.setFeeKeeper(
         BASE_PARAMS, BASE_PARAMS, BASE_PARAMS / 100, 0, {"from": angle_fee_manager}
     )  # set SLP slippage to 1%
 
@@ -150,22 +150,22 @@ def test_almost_lossy_strat(
     alice,
     alice_amount,
     strategy,
-    sanToken,
+    san_token,
     strategist,
-    angleStake,
-    angle,
+    san_token_gauge,
+    angle_stable_master,
     gov,
     BASE_PARAMS,
     angle_fee_manager,
     utils,
-    angleToken,
+    angle_token,
     live_yearn_treasury,
 ):
     token.approve(vault, 1_000_000_000_000, {"from": alice})
 
     vault.deposit(alice_amount, {"from": alice})
 
-    assert sanToken.balanceOf(strategy) == 0
+    assert san_token.balanceOf(strategy) == 0
 
     vault.setManagementFee(0, {"from": gov})
     vault.setPerformanceFee(0, {"from": gov})
@@ -173,15 +173,15 @@ def test_almost_lossy_strat(
     # First harvest
     strategy.harvest({"from": strategist})
 
-    assert angleStake.balanceOf(strategy) > 0
+    assert san_token_gauge.balanceOf(strategy) > 0
     assets_at_t = strategy.estimatedTotalAssets()
 
     chain.sleep(10 ** 10)
     chain.mine(100)
 
-    before_harvest_treasury_rewards_bal = angleToken.balanceOf(live_yearn_treasury)
+    before_harvest_treasury_rewards_bal = angle_token.balanceOf(live_yearn_treasury)
     strategy.harvest({"from": strategist})
-    after_harvest_treasury_rewards_bal = angleToken.balanceOf(live_yearn_treasury)
+    after_harvest_treasury_rewards_bal = angle_token.balanceOf(live_yearn_treasury)
     assert after_harvest_treasury_rewards_bal > before_harvest_treasury_rewards_bal
 
     chain.mine(1)
@@ -191,7 +191,7 @@ def test_almost_lossy_strat(
     assert assets_at_t_plus_one > assets_at_t
 
     # As a technique to simulate losses, we increase slippage
-    angle.setFeeKeeper(
+    angle_stable_master.setFeeKeeper(
         BASE_PARAMS, BASE_PARAMS, BASE_PARAMS / 10000, 0, {"from": angle_fee_manager}
     )  # set SLP slippage to 0.001% (one tenth of a bip)
 

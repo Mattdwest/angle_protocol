@@ -24,12 +24,11 @@ def test_migration(
     bob_amount,
     tinytim,
     tinytim_amount,
-    angleToken,
-    angle,
-    sanToken,
-    angle_liquidity,
-    angleStake,
-    poolManager,
+    angle_token,
+    angle_stable_master,
+    san_token,
+    san_token_gauge,
+    pool_manager,
     newstrategy,
     utils,
 ):
@@ -48,22 +47,22 @@ def test_migration(
     # First harvest
     strategy.harvest({"from": strategist})
 
-    assert angleStake.balanceOf(strategy) > 0
+    assert san_token_gauge.balanceOf(strategy) > 0
     assets_at_t = strategy.estimatedTotalAssets()
 
-    utils.mock_angle_slp_profits(angle, assets_at_t / 100)
+    utils.mock_angle_slp_profits(angle_stable_master, assets_at_t / 100)
 
     assets_at_t_plus_one = strategy.estimatedTotalAssets()
     assert assets_at_t_plus_one > assets_at_t
 
-    assert angleStake.balanceOf(newstrategy) == 0
+    assert san_token_gauge.balanceOf(newstrategy) == 0
 
     newstrategy.setStrategist(strategist)
     vault.migrateStrategy(strategy, newstrategy, {"from": gov})
 
-    assert sanToken.balanceOf(strategy) == 0
-    assert sanToken.balanceOf(newstrategy) > 0
+    assert san_token.balanceOf(strategy) == 0
+    assert san_token.balanceOf(newstrategy) > 0
 
     newstrategy.harvest({"from": strategist})
-    assert sanToken.balanceOf(newstrategy) == 0
-    assert angleStake.balanceOf(newstrategy) > 0
+    assert san_token.balanceOf(newstrategy) == 0
+    assert san_token_gauge.balanceOf(newstrategy) > 0

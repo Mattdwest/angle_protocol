@@ -15,24 +15,24 @@ def test_clone(
     tinytim,
     tinytim_amount,
     chain,
-    angleStake,
-    sanToken,
-    angleToken,
+    san_token_gauge,
+    san_token,
+    angle_token,
     uni,
-    angle,
-    poolManager,
+    angle_stable_master,
+    pool_manager,
 ):
     clone_tx = strategy.cloneAngle(
         vault,
         strategist,
         strategist,
         strategist,
-        sanToken,
-        angleToken,
+        san_token,
+        angle_token,
         uni,
-        angle,
-        angleStake,
-        poolManager,
+        angle_stable_master,
+        san_token_gauge,
+        pool_manager,
         {"from": strategist},
     )
     cloned_strategy = Contract.from_abi(
@@ -54,12 +54,12 @@ def test_clone(
     vault.setManagementFee(0, {"from": gov})
     vault.setPerformanceFee(0, {"from": gov})
 
-    assert sanToken.balanceOf(strategy) == 0
+    assert san_token.balanceOf(strategy) == 0
 
     # First harvest
     strategy.harvest({"from": strategist})
 
-    assert angleStake.balanceOf(strategy) > 0
+    assert san_token_gauge.balanceOf(strategy) > 0
     chain.sleep(3600 * 24 * 2)
     chain.mine(1)
     chain.sleep(3600 * 1)
@@ -121,24 +121,24 @@ def test_clone_of_clone(
     vault,
     strategist,
     gov,
-    angleStake,
-    sanToken,
-    angleToken,
+    san_token_gauge,
+    san_token,
+    angle_token,
     uni,
-    angle,
-    poolManager,
+    angle_stable_master,
+    pool_manager,
 ):
     clone_tx = strategy.cloneAngle(
         vault,
         strategist,
         strategist,
         strategist,
-        sanToken,
-        angleToken,
+        san_token,
+        angle_token,
         uni,
-        angle,
-        angleStake,
-        poolManager,
+        angle_stable_master,
+        san_token_gauge,
+        pool_manager,
         {"from": strategist},
     )
     cloned_strategy = Contract.from_abi(
@@ -154,12 +154,12 @@ def test_clone_of_clone(
             strategist,
             strategist,
             strategist,
-            sanToken,
-            angleToken,
+            san_token,
+            angle_token,
             uni,
-            angle,
-            angleStake,
-            poolManager,
+            angle_stable_master,
+            san_token_gauge,
+            pool_manager,
             {"from": strategist},
         )
 
@@ -169,24 +169,24 @@ def test_double_initialize(
     vault,
     strategist,
     gov,
-    angleStake,
-    sanToken,
-    angleToken,
+    san_token_gauge,
+    san_token,
+    angle_token,
     uni,
-    angle,
-    poolManager,
+    angle_stable_master,
+    pool_manager,
 ):
     clone_tx = strategy.cloneAngle(
         vault,
         strategist,
         strategist,
         strategist,
-        sanToken,
-        angleToken,
+        san_token,
+        angle_token,
         uni,
-        angle,
-        angleStake,
-        poolManager,
+        angle_stable_master,
+        san_token_gauge,
+        pool_manager,
         {"from": strategist},
     )
     cloned_strategy = Contract.from_abi(
@@ -200,11 +200,11 @@ def test_double_initialize(
             strategist,
             strategist,
             strategist,
-            sanToken,
-            angleToken,
+            san_token,
+            angle_token,
             uni,
-            angle,
-            angleStake,
-            poolManager,
+            angle_stable_master,
+            san_token_gauge,
+            pool_manager,
             {"from": strategist},
         )

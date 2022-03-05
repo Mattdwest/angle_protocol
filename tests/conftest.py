@@ -103,22 +103,22 @@ def strategy(
     vault,
     StrategyAngleUSDC,
     gov,
-    sanToken,
-    angleToken,
+    san_token,
+    angle_token,
     uni,
-    angle,
-    angleStake,
-    poolManager,
+    angle_stable_master,
+    san_token_gauge,
+    pool_manager,
 ):
     strategy = strategist.deploy(
         StrategyAngleUSDC,
         vault,
-        sanToken,
-        angleToken,
+        san_token,
+        angle_token,
         uni,
-        angle,
-        angleStake,
-        poolManager,
+        angle_stable_master,
+        san_token_gauge,
+        pool_manager,
     )
     strategy.setKeeper(keeper, {"from": gov})
     vault.addStrategy(strategy, 10_000, 0, 2 ** 256 - 1, 1_000, {"from": gov})
@@ -131,43 +131,43 @@ def uni():
     yield Contract("0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F")
 
 
-# USDC sanToken
+# USDC san_token
 @pytest.fixture(scope="module", autouse=True)
-def sanToken():
+def san_token():
     yield Contract.from_explorer("0x9C215206Da4bf108aE5aEEf9dA7caD3352A36Dad")
 
 
-# USDC sanToken whale
+# USDC san_token whale
 @pytest.fixture(scope="module", autouse=True)
 def san_token_whale(accounts):
-    address = "0x51fE22abAF4a26631b2913E417c0560D547797a7"  # USDC sanToken guage
+    address = "0x51fE22abAF4a26631b2913E417c0560D547797a7"  # USDC san_token guage
     yield accounts.at(address, force=True)
 
 
 @pytest.fixture(scope="module", autouse=True)
-def angleToken():
+def angle_token():
     yield Contract("0x31429d1856aD1377A8A0079410B297e1a9e214c2")
 
 
 @pytest.fixture(scope="module", autouse=True)
-def veAngleToken():
+def veangle_token():
     yield Contract("0x0C462Dbb9EC8cD1630f1728B2CFD2769d09f0dd5")
 
 
 # stable manager front
 @pytest.fixture(scope="module", autouse=True)
-def angle():
+def angle_stable_master():
     yield Contract("0x5adDc89785D75C86aB939E9e15bfBBb7Fc086A87")
 
 
 # usdc stake
 @pytest.fixture(scope="module", autouse=True)
-def angleStake():
+def san_token_gauge():
     yield Contract("0x51fE22abAF4a26631b2913E417c0560D547797a7")
 
 
 @pytest.fixture(scope="module", autouse=True)
-def poolManager():
+def pool_manager():
     yield Contract("0xe9f183FC656656f1F17af1F2b0dF79b8fF9ad8eD")
 
 
@@ -185,22 +185,22 @@ def newstrategy(
     vault,
     StrategyAngleUSDC,
     gov,
-    sanToken,
-    angleToken,
+    san_token,
+    angle_token,
     uni,
-    angle,
-    angleStake,
-    poolManager,
+    angle_stable_master,
+    san_token_gauge,
+    pool_manager,
 ):
     newstrategy = guardian.deploy(
         StrategyAngleUSDC,
         vault,
-        sanToken,
-        angleToken,
+        san_token,
+        angle_token,
         uni,
-        angle,
-        angleStake,
-        poolManager,
+        angle_stable_master,
+        san_token_gauge,
+        pool_manager,
     )
     newstrategy.setKeeper(keeper)
     yield newstrategy
@@ -234,7 +234,7 @@ def angle_fee_manager(accounts):
 
 
 @pytest.fixture(scope="module", autouse=True)
-def angle_pool_manager(accounts):
+def pool_manager_account(accounts):
     address = "0xe9f183FC656656f1F17af1F2b0dF79b8fF9ad8eD"
     yield accounts.at(address, force=True)
 
@@ -245,17 +245,17 @@ def BASE_PARAMS():
 
 
 @pytest.fixture(scope="module", autouse=True)
-def utils(chain, angle_pool_manager):
-    return Utils(chain, angle_pool_manager)
+def utils(chain, pool_manager_account):
+    return Utils(chain, pool_manager_account)
 
 
 class Utils:
-    def __init__(self, chain, angle_pool_manager):
+    def __init__(self, chain, pool_manager_account):
         self.chain = chain
-        self.angle_pool_manager = angle_pool_manager
+        self.pool_manager_account = pool_manager_account
 
     def mock_angle_slp_profits(self, stable_master, profits):
-        stable_master.accumulateInterest(profits, {"from": self.angle_pool_manager})
+        stable_master.accumulateInterest(profits, {"from": self.pool_manager_account})
         self.chain.mine(1)
         self.chain.sleep(1)
-        stable_master.accumulateInterest(profits, {"from": self.angle_pool_manager})
+        stable_master.accumulateInterest(profits, {"from": self.pool_manager_account})
