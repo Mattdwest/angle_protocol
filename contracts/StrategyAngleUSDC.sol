@@ -3,24 +3,21 @@
 pragma experimental ABIEncoderV2;
 pragma solidity 0.6.12;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/math/Math.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
-import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import {
+    SafeERC20,
+    SafeMath,
+    IERC20,
+    Address
+} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 import {BaseStrategy} from "@yearnvaults/contracts/BaseStrategy.sol";
 
 import "../interfaces/curve/ICurve.sol";
-import "../interfaces/Angle/IAngle.sol";
-import "../interfaces/Angle/IAngleStake.sol";
+import "../interfaces/Angle/IStableMaster.sol";
 import "../interfaces/Angle/IAngleGauge.sol";
 import "../interfaces/uniswap/IUni.sol";
-
-interface IName {
-    function name() external view returns (string memory);
-}
 
 contract StrategyAngleUSDC is BaseStrategy {
     using SafeERC20 for IERC20;
@@ -164,7 +161,7 @@ contract StrategyAngleUSDC is BaseStrategy {
     }
 
     function name() external view override returns (string memory) {
-        return string(abi.encodePacked("Angle ", IName(address(want)).name()));
+        return string(abi.encodePacked("Angle", ERC20(address(want)).symbol()));
     }
 
     function protectedTokens()
@@ -253,7 +250,7 @@ contract StrategyAngleUSDC is BaseStrategy {
         uint256 _wantAvailable = _balanceOfWant.sub(_debtOutstanding);
         if (_wantAvailable > 0) {
             //deposit for sanToken
-            IAngle(angle).deposit(_wantAvailable, address(this), poolManager);
+            IStableMaster(angle).deposit(_wantAvailable, address(this), poolManager);
 
             uint256 sanBalance = balanceOfSanToken();
             IAngleGauge(angleStake).deposit(sanBalance);
@@ -291,7 +288,7 @@ contract StrategyAngleUSDC is BaseStrategy {
 
         //address thisStrat = address(this);
         uint256 sanAmount = balanceOfSanToken();
-        IAngle(angle).withdraw(
+        IStableMaster(angle).withdraw(
             sanAmount,
             address(this),
             address(this),
@@ -306,7 +303,7 @@ contract StrategyAngleUSDC is BaseStrategy {
         uint256 redepositAmt = balanceOfWantAfter.sub(_amount);
 
         if (redepositAmt > 0) {
-            IAngle(angle).deposit(redepositAmt, address(this), poolManager);
+            IStableMaster(angle).deposit(redepositAmt, address(this), poolManager);
             sanAmount = balanceOfSanToken();
             IAngleGauge(angleStake).deposit(sanAmount);
         }
@@ -350,15 +347,15 @@ contract StrategyAngleUSDC is BaseStrategy {
     function valueOfSanToken() public view returns (uint256) {
         uint256 balance = balanceOfSanToken();
         (, , , , , uint256 sanRate, , , ) =
-            IAngle(angle).collateralMap(poolManager);
-        return balance.mul(sanRate);
+            IStableMaster(angle).collateralMap(poolManager);
+        return balance.mul(sanRate).div(1e18);
     }
 
     function valueOfStake() public view returns (uint256) {
         uint256 balance = balanceOfStake();
         (, , , , , uint256 sanRate, , , ) =
-            IAngle(angle).collateralMap(poolManager);
-        return balance.mul(sanRate);
+            IStableMaster(angle).collateralMap(poolManager);
+        return balance.mul(sanRate).div(1e18);
     }
 
     // swaps rewarded tokens for want
