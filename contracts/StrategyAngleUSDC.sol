@@ -334,13 +334,6 @@ contract StrategyAngleUSDC is BaseStrategy {
         );
     }
 
-    function valueOfStake() public view returns (uint256) {
-        uint256 balance = balanceOfStake();
-        (, , , , , uint256 sanRate, , , ) =
-            IStableMaster(angle).collateralMap(poolManager);
-        return balance.mul(sanRate).div(1e18);
-    }
-
     // swaps rewarded tokens for want
     // needs to use Sushi. May want to include UniV2 / V3
     function _swap(uint256 _amountIn, address _token) internal {
@@ -412,10 +405,23 @@ contract StrategyAngleUSDC is BaseStrategy {
     }
 
     function valueOfSanToken() public view returns (uint256) {
-        uint256 balance = balanceOfSanToken();
-        (, , , , , uint256 sanRate, , , ) =
+        uint256 _balance = balanceOfSanToken();
+
+        return _balance.mul(getSanRate()).div(1e18);
+    }
+
+    function valueOfStake() public view returns (uint256) {
+        uint256 _balance = balanceOfStake();
+
+        return _balance.mul(getSanRate()).div(1e18);
+    }
+
+    // Get rate of conversion between sanTokens and want
+    function getSanRate() public view returns (uint256) {
+        (, , , , , uint256 _sanRate, , , ) =
             IStableMaster(angle).collateralMap(poolManager);
-        return balance.mul(sanRate).div(1e18);
+
+        return _sanRate;
     }
 
     function depositToStableMaster(uint256 _amount) internal {
