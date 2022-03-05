@@ -170,10 +170,12 @@ def angleStake():
 def poolManager():
     yield Contract("0xe9f183FC656656f1F17af1F2b0dF79b8fF9ad8eD")
 
+
 @pytest.fixture
 def live_yearn_treasury():
     address = "0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde"
     yield Contract(address)
+
 
 @pytest.fixture
 def newstrategy(
@@ -218,24 +220,29 @@ def fxs_liquidity(accounts):
 def token_owner(accounts):
     yield accounts.at("0x8412ebf45bac1b340bbe8f318b928c466c4e39ca", force=True)
 
+
 @pytest.fixture
 def angle_gov(accounts):
     address = "0xdC4e6DFe07EFCa50a197DF15D9200883eF4Eb1c8"
     yield accounts.at(address, force=True)
+
 
 @pytest.fixture
 def angle_fee_manager(accounts):
     address = "0x97B6897AAd7aBa3861c04C0e6388Fc02AF1F227f"
     yield accounts.at(address, force=True)
 
+
 @pytest.fixture
 def angle_pool_manager(accounts):
     address = "0xe9f183FC656656f1F17af1F2b0dF79b8fF9ad8eD"
     yield accounts.at(address, force=True)
 
+
 @pytest.fixture(scope="session")
 def BASE_PARAMS():
     yield 1000000000
+
 
 @pytest.fixture
 def utils(chain, angle_pool_manager):

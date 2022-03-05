@@ -1,4 +1,4 @@
-from brownie import Contract
+from brownie import Contract, reverts
 import pytest
 
 
@@ -114,3 +114,97 @@ def test_clone(
 
     # We should have made profit
     assert vault.pricePerShare() > 1e6
+
+
+def test_clone_of_clone(
+    strategy,
+    vault,
+    strategist,
+    gov,
+    angleStake,
+    sanToken,
+    angleToken,
+    uni,
+    angle,
+    poolManager,
+):
+    clone_tx = strategy.cloneAngle(
+        vault,
+        strategist,
+        strategist,
+        strategist,
+        sanToken,
+        angleToken,
+        uni,
+        angle,
+        angleStake,
+        poolManager,
+        {"from": strategist},
+    )
+    cloned_strategy = Contract.from_abi(
+        "StrategyAngleUSDC", clone_tx.events["Cloned"]["clone"], strategy.abi
+    )
+
+    vault.migrateStrategy(strategy.address, cloned_strategy.address, {"from": gov})
+
+    # should not clone a clone
+    with reverts():
+        cloned_strategy.cloneAngle(
+            vault,
+            strategist,
+            strategist,
+            strategist,
+            sanToken,
+            angleToken,
+            uni,
+            angle,
+            angleStake,
+            poolManager,
+            {"from": strategist},
+        )
+
+
+def test_double_initialize(
+    strategy,
+    vault,
+    strategist,
+    gov,
+    angleStake,
+    sanToken,
+    angleToken,
+    uni,
+    angle,
+    poolManager,
+):
+    clone_tx = strategy.cloneAngle(
+        vault,
+        strategist,
+        strategist,
+        strategist,
+        sanToken,
+        angleToken,
+        uni,
+        angle,
+        angleStake,
+        poolManager,
+        {"from": strategist},
+    )
+    cloned_strategy = Contract.from_abi(
+        "StrategyAngleUSDC", clone_tx.events["Cloned"]["clone"], strategy.abi
+    )
+
+    # should not be able to call initialize twice
+    with reverts("Strategy already initialized"):
+        cloned_strategy.initialize(
+            vault,
+            strategist,
+            strategist,
+            strategist,
+            sanToken,
+            angleToken,
+            uni,
+            angle,
+            angleStake,
+            poolManager,
+            {"from": strategist},
+        )

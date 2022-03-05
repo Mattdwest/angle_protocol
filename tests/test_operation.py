@@ -134,7 +134,7 @@ from brownie import StrategyAngleUSDC
 #     angle.setFeeKeeper(BASE_PARAMS, BASE_PARAMS, BASE_PARAMS / 100, 0, {"from": angle_fee_manager}) # set SLP slippage to 1%
 
 #     strategy.setEmergencyExit({"from": gov}) # this will pull the assets out of angle, so we'll feel the slippage
-#     strategy.setDoHealthCheck(False, {"from": gov}) 
+#     strategy.setDoHealthCheck(False, {"from": gov})
 #     strategy.harvest({"from": gov})
 
 #     vault.withdraw({"from": alice})
@@ -160,7 +160,7 @@ def test_almost_lossy_strat(
     angle_fee_manager,
     utils,
     angleToken,
-    live_yearn_treasury
+    live_yearn_treasury,
 ):
     token.approve(vault, 1_000_000_000_000, {"from": alice})
 
@@ -177,7 +177,7 @@ def test_almost_lossy_strat(
     assert angleStake.balanceOf(strategy) > 0
     assets_at_t = strategy.estimatedTotalAssets()
 
-    chain.sleep(10**10)
+    chain.sleep(10 ** 10)
     chain.mine(100)
 
     before_harvest_treasury_rewards_bal = angleToken.balanceOf(live_yearn_treasury)
@@ -192,7 +192,9 @@ def test_almost_lossy_strat(
     assert assets_at_t_plus_one > assets_at_t
 
     # As a technique to simulate losses, we increase slippage
-    angle.setFeeKeeper(BASE_PARAMS, BASE_PARAMS, BASE_PARAMS / 1000, 0, {"from": angle_fee_manager}) # set SLP slippage to 0.01% (a bip)
+    angle.setFeeKeeper(
+        BASE_PARAMS, BASE_PARAMS, BASE_PARAMS / 1000, 0, {"from": angle_fee_manager}
+    )  # set SLP slippage to 0.01% (a bip)
 
     vault.withdraw({"from": alice})
 

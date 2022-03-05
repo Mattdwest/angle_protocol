@@ -27,7 +27,7 @@ def test_shutdown(
     utils,
     angle,
     BASE_PARAMS,
-    angle_fee_manager
+    angle_fee_manager,
 ):
     token.approve(vault, 1_000_000_000_000, {"from": alice})
     token.approve(vault, 1_000_000_000_000, {"from": bob})
@@ -50,7 +50,7 @@ def test_shutdown(
 
     assets_at_t_plus_one = strategy.estimatedTotalAssets()
     assert assets_at_t_plus_one > assets_at_t
-    
+
     strategy.setEmergencyExit({"from": gov})
     strategy.harvest({"from": strategist})
     chain.mine(1)
