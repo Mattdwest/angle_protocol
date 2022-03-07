@@ -10,9 +10,9 @@ import {
     IERC20,
     Address
 } from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 import {BaseStrategy} from "@yearnvaults/contracts/BaseStrategy.sol";
+import {IERC20Metadata} from "@yearnvaults/contracts/yToken.sol";
 
 import "../interfaces/curve/ICurve.sol";
 import "../interfaces/Angle/IStableMaster.sol";
@@ -161,7 +161,13 @@ contract StrategyAngleUSDC is BaseStrategy {
     }
 
     function name() external view override returns (string memory) {
-        return string(abi.encodePacked("Angle", ERC20(address(want)).symbol()));
+        return
+            string(
+                abi.encodePacked(
+                    "Angle",
+                    IERC20Metadata(address(want)).symbol()
+                )
+            );
     }
 
     // returns sum of all assets, realized and unrealized
@@ -169,7 +175,6 @@ contract StrategyAngleUSDC is BaseStrategy {
         return balanceOfWant().add(valueOfStake()).add(valueOfSanToken());
     }
 
-    // claim profit and swap for want
     function prepareReturn(uint256 _debtOutstanding)
         internal
         override
@@ -179,48 +184,62 @@ contract StrategyAngleUSDC is BaseStrategy {
             uint256 _debtPayment
         )
     {
-        // We might need to return want to the vault
-        if (_debtOutstanding > 0) {
-            uint256 _amountFreed = 0;
-            (_amountFreed, _loss) = liquidatePosition(_debtOutstanding);
-            _debtPayment = Math.min(_amountFreed, _debtOutstanding);
-        }
-
-        // harvest() will track profit by estimated total assets compared to debt.
-
-        uint256 currentValue = estimatedTotalAssets();
+        // First, claim & sell any rewards.
 
         IAngleGauge(sanTokenGauge).claim_rewards();
 
-        uint256 _tokensAvailable = IERC20(angleToken).balanceOf(address(this));
+        uint256 _tokensAvailable = balanceOfAngleToken();
         if (_tokensAvailable > 0) {
             uint256 _tokensToGov =
                 _tokensAvailable.mul(percentKeep).div(_denominator);
             if (_tokensToGov > 0) {
                 IERC20(angleToken).safeTransfer(treasury, _tokensToGov);
             }
-            uint256 _tokensRemain = IERC20(angleToken).balanceOf(address(this));
+            uint256 _tokensRemain = balanceOfAngleToken();
             _swap(_tokensRemain, address(angleToken));
         }
 
-        uint256 afterValue = estimatedTotalAssets();
+        // Second, run initial profit + loss calculations.
 
-        if (afterValue > currentValue) {
-            _profit = afterValue.sub(currentValue);
+        uint256 _totalAssets = estimatedTotalAssets();
+        uint256 _totalDebt = vault.strategies(address(this)).totalDebt;
+
+        if (_totalAssets >= _totalDebt) {
+            // Implicitly, _profit & _loss are 0 before we change them.
+            _profit = _totalAssets.sub(_totalDebt);
+        } else {
+            _loss = _totalDebt.sub(_totalAssets);
         }
 
-        if (_profit > _loss) {
-            _profit = _profit.sub(_loss);
-            _loss = 0;
+        // Third, free up _debtOutstanding + our profit, and make any necessary adjustments to the accounting.
+
+        (, uint256 _liquidationLoss) =
+            liquidatePosition(_debtOutstanding.add(_profit));
+
+        if (_liquidationLoss < _profit) {
+            // We can lose money in the liquidation (e.g., via slippage)
+            _profit = _profit.sub(_liquidationLoss);
         } else {
-            _loss = _loss.sub(_profit);
+            _loss = _loss.add(_liquidationLoss.sub(_profit));
             _profit = 0;
+        }
+
+        // Fourth, calculate what we can pay back to the vault.
+
+        uint256 _liquidAssets = balanceOfWant();
+
+        if (_liquidAssets < _profit) {
+            _profit = _liquidAssets;
+            _debtPayment = 0;
+        } else if (_liquidAssets < _debtOutstanding.add(_profit)) {
+            _debtPayment = _liquidAssets.sub(_profit);
+        } else {
+            _debtPayment = _debtOutstanding;
         }
     }
 
     // Deposit value & stake
     function adjustPosition(uint256 _debtOutstanding) internal override {
-        //emergency exit is dealt with in prepareReturn
         if (emergencyExit) {
             return;
         }
@@ -251,8 +270,7 @@ contract StrategyAngleUSDC is BaseStrategy {
         override
         returns (uint256 _amountFreed)
     {
-        //shouldn't matter, logic is already in liquidatePosition
-        (_amountFreed, ) = liquidatePosition(type(uint256).max);
+        (_amountFreed, ) = liquidatePosition(estimatedTotalAssets());
     }
 
     //v0.4.3 includes logic for emergencyExit
@@ -261,6 +279,8 @@ contract StrategyAngleUSDC is BaseStrategy {
         override
         returns (uint256 _liquidatedAmount, uint256 _loss)
     {
+        // NOTE: Maintain invariant `_liquidatedAmount + _loss <= _amountNeeded`
+
         uint256 _balanceOfWant = balanceOfWant();
         if (_balanceOfWant < _amountNeeded) {
             // We need to withdraw to get back more want
@@ -277,15 +297,20 @@ contract StrategyAngleUSDC is BaseStrategy {
         }
     }
 
-    // withdraw some want from the vaults
+    // withdraw some want from Angle
     function _withdrawSome(uint256 _amount) internal returns (uint256) {
-        uint256 balanceOfWantBefore = balanceOfWant();
+        uint256 _balanceOfWantBefore = balanceOfWant();
+        uint256 _amountInSanToken = wantToSanToken(_amount);
 
-        IAngleGauge(sanTokenGauge).withdraw(balanceOfStake());
+        uint256 _sanTokenBalance = balanceOfSanToken();
+        if (_amountInSanToken > _sanTokenBalance) {
+            IAngleGauge(sanTokenGauge).withdraw(
+                _amountInSanToken.sub(_sanTokenBalance)
+            );
+        }
 
-        uint256 sanAmount = balanceOfSanToken();
         IStableMaster(angleStableMaster).withdraw(
-            sanAmount,
+            _amountInSanToken,
             address(this),
             address(this),
             poolManager
@@ -293,20 +318,9 @@ contract StrategyAngleUSDC is BaseStrategy {
 
         uint256 balanceOfWantAfter = balanceOfWant();
 
-        if (balanceOfWantAfter < _amount) {
-            balanceOfWantAfter = _amount;
-        }
-        uint256 redepositAmt = balanceOfWantAfter.sub(_amount);
+        uint256 _difference = balanceOfWant().sub(_balanceOfWantBefore);
 
-        if (redepositAmt > 0) {
-            depositToStableMaster(redepositAmt);
-            sanAmount = balanceOfSanToken();
-            IAngleGauge(sanTokenGauge).deposit(sanAmount);
-        }
-
-        uint256 difference = balanceOfWant().sub(balanceOfWantBefore);
-
-        return difference;
+        return _difference;
     }
 
     // swaps rewarded tokens for want
@@ -401,15 +415,23 @@ contract StrategyAngleUSDC is BaseStrategy {
     }
 
     function valueOfSanToken() public view returns (uint256) {
-        uint256 _balance = balanceOfSanToken();
-
-        return _balance.mul(getSanRate()).div(1e18);
+        return sanTokenToWant(balanceOfSanToken());
     }
 
     function valueOfStake() public view returns (uint256) {
-        uint256 _balance = balanceOfStake();
+        return sanTokenToWant(balanceOfStake());
+    }
 
-        return _balance.mul(getSanRate()).div(1e18);
+    function sanTokenToWant(uint256 _sanTokenAmount)
+        public
+        view
+        returns (uint256)
+    {
+        return _sanTokenAmount.mul(getSanRate()).div(1e18);
+    }
+
+    function wantToSanToken(uint256 _wantAmount) public view returns (uint256) {
+        return _wantAmount.mul(1e18).div(getSanRate()).add(1);
     }
 
     // Get rate of conversion between sanTokens and want

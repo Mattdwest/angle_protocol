@@ -150,6 +150,11 @@ def angle_token():
 
 
 @pytest.fixture(scope="module", autouse=True)
+def angle_token_whale(accounts):
+    yield accounts.at("0xe02F8E39b8cFA7d3b62307E46077669010883459", force=True)
+
+
+@pytest.fixture(scope="module", autouse=True)
 def veangle_token():
     yield Contract("0x0C462Dbb9EC8cD1630f1728B2CFD2769d09f0dd5")
 
@@ -207,11 +212,6 @@ def newstrategy(
 
 
 @pytest.fixture(scope="module", autouse=True)
-def angle_liquidity(accounts):
-    yield accounts.at("0x31429d1856aD1377A8A0079410B297e1a9e214c2", force=True)
-
-
-@pytest.fixture(scope="module", autouse=True)
 def fxs_liquidity(accounts):
     yield accounts.at("0xf977814e90da44bfa03b6295a0616a897441acec", force=True)
 
@@ -245,17 +245,75 @@ def BASE_PARAMS():
 
 
 @pytest.fixture(scope="module", autouse=True)
-def utils(chain, pool_manager_account):
-    return Utils(chain, pool_manager_account)
+def utils(
+    chain,
+    pool_manager_account,
+    pool_manager,
+    angle_stable_master,
+    strategy,
+    vault,
+    gov,
+    token,
+    san_token_gauge,
+    san_token,
+):
+    return Utils(
+        chain,
+        pool_manager_account,
+        pool_manager,
+        angle_stable_master,
+        strategy,
+        vault,
+        gov,
+        token,
+        san_token_gauge,
+        san_token,
+    )
 
 
 class Utils:
-    def __init__(self, chain, pool_manager_account):
+    def __init__(
+        self,
+        chain,
+        pool_manager_account,
+        pool_manager,
+        angle_stable_master,
+        strategy,
+        vault,
+        gov,
+        token,
+        san_token_gauge,
+        san_token,
+    ):
         self.chain = chain
         self.pool_manager_account = pool_manager_account
+        self.pool_manager = pool_manager
+        self.angle_stable_master = angle_stable_master
+        self.strategy = strategy
+        self.vault = vault
+        self.gov = gov
+        self.token = token
+        self.san_token_gauge = san_token_gauge
+        self.san_token = san_token
 
-    def mock_angle_slp_profits(self, stable_master, profits):
-        stable_master.accumulateInterest(profits, {"from": self.pool_manager_account})
-        self.chain.mine(1)
-        self.chain.sleep(1)
-        stable_master.accumulateInterest(profits, {"from": self.pool_manager_account})
+    def mock_angle_slp_profits(self):
+        max_profits_per_block = self.angle_stable_master.collateralMap(
+            self.pool_manager
+        )[7][2]
+        i = 0
+        while i < 100:
+            self.angle_stable_master.accumulateInterest(
+                max_profits_per_block, {"from": self.pool_manager_account}
+            )
+            self.chain.mine(1)
+            self.chain.sleep(1)
+            i += 1
+
+    def set_0_vault_fees(self):
+        self.vault.setManagementFee(0, {"from": self.gov})
+        self.vault.setPerformanceFee(0, {"from": self.gov})
+
+    def assert_strategy_contains_no_tokens(self):
+        assert self.token.balanceOf(self.strategy) == 0
+        assert self.san_token_gauge.balanceOf(self.strategy) == 0
+        assert self.san_token.balanceOf(self.strategy) == 0

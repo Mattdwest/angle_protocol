@@ -41,16 +41,14 @@ def test_migration(
     vault.deposit(bob_amount, {"from": bob})
     vault.deposit(tinytim_amount, {"from": tinytim})
 
-    vault.setManagementFee(0, {"from": gov})
-    vault.setPerformanceFee(0, {"from": gov})
+    utils.set_0_vault_fees()
 
-    # First harvest
     strategy.harvest({"from": strategist})
 
     assert san_token_gauge.balanceOf(strategy) > 0
     assets_at_t = strategy.estimatedTotalAssets()
 
-    utils.mock_angle_slp_profits(angle_stable_master, assets_at_t / 100)
+    utils.mock_angle_slp_profits()
 
     assets_at_t_plus_one = strategy.estimatedTotalAssets()
     assert assets_at_t_plus_one > assets_at_t
