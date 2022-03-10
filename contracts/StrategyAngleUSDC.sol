@@ -270,6 +270,7 @@ contract StrategyAngleUSDC is BaseStrategy {
         returns (uint256 _liquidatedAmount, uint256 _loss)
     {
         // NOTE: Maintain invariant `_liquidatedAmount + _loss <= _amountNeeded`
+        _amountNeeded = Math.min(_amountNeeded, estimatedTotalAssets()); // This makes it safe to request to liquidate more than we have
 
         uint256 _balanceOfWant = balanceOfWant();
         if (_balanceOfWant < _amountNeeded) {
@@ -288,8 +289,7 @@ contract StrategyAngleUSDC is BaseStrategy {
     }
 
     // withdraw some want from Angle
-    function _withdrawSome(uint256 _amount) internal returns (uint256) {
-        uint256 _balanceOfWantBefore = balanceOfWant();
+    function _withdrawSome(uint256 _amount) internal {
         uint256 _amountInSanToken = wantToSanToken(_amount);
 
         uint256 _sanTokenBalance = balanceOfSanToken();
@@ -305,12 +305,6 @@ contract StrategyAngleUSDC is BaseStrategy {
             address(this),
             poolManager
         );
-
-        uint256 balanceOfWantAfter = balanceOfWant();
-
-        uint256 _difference = balanceOfWant().sub(_balanceOfWantBefore);
-
-        return _difference;
     }
 
     // swaps rewarded tokens for want
