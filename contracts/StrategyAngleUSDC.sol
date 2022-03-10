@@ -39,7 +39,6 @@ contract StrategyAngleUSDC is BaseStrategy {
     address public unirouter;
     address public angleStableMaster;
     address public sanTokenGauge;
-    address public refer;
     address public treasury;
     address public poolManager;
 
@@ -213,28 +212,19 @@ contract StrategyAngleUSDC is BaseStrategy {
 
         // Third, free up _debtOutstanding + our profit, and make any necessary adjustments to the accounting.
 
-        (, uint256 _liquidationLoss) =
+        (uint256 _amountFreed, uint256 _liquidationLoss) =
             liquidatePosition(_debtOutstanding.add(_profit));
 
-        if (_liquidationLoss < _profit) {
-            // We can lose money in the liquidation (e.g., via slippage)
-            _profit = _profit.sub(_liquidationLoss);
-        } else {
-            _loss = _loss.add(_liquidationLoss.sub(_profit));
+        _loss = _loss.add(_liquidationLoss);
+
+        _debtPayment = Math.min(_debtOutstanding, _amountFreed);
+
+        if (_loss > _profit) {
+            _loss = _loss.sub(_profit);
             _profit = 0;
-        }
-
-        // Fourth, calculate what we can pay back to the vault.
-
-        uint256 _liquidAssets = balanceOfWant();
-
-        if (_liquidAssets < _profit) {
-            _profit = _liquidAssets;
-            _debtPayment = 0;
-        } else if (_liquidAssets < _debtOutstanding.add(_profit)) {
-            _debtPayment = _liquidAssets.sub(_profit);
         } else {
-            _debtPayment = _debtOutstanding;
+            _profit = _profit.sub(_loss);
+            _loss = 0;
         }
     }
 
@@ -385,10 +375,6 @@ contract StrategyAngleUSDC is BaseStrategy {
 
     function setKeepInBips(uint256 _percentKeep) external onlyVaultManagers {
         percentKeep = _percentKeep;
-    }
-
-    function setReferrer(address _refer) external onlyVaultManagers {
-        refer = _refer;
     }
 
     // where angleToken goes

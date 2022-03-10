@@ -41,6 +41,7 @@ def test_sequential(
     vault.setPerformanceFee(0, {"from": gov})
 
     # First harvest
+    chain.sleep(1)
     strategy.harvest({"from": strategist})
 
     assert san_token_gauge.balanceOf(strategy) > 0
@@ -51,6 +52,7 @@ def test_sequential(
     assets_at_t_plus_one = strategy.estimatedTotalAssets()
     assert assets_at_t_plus_one > assets_at_t
 
+    chain.sleep(1)
     strategy.harvest({"from": strategist})
     chain.mine(1)
 

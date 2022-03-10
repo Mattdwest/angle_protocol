@@ -43,6 +43,7 @@ def test_migration(
 
     utils.set_0_vault_fees()
 
+    chain.sleep(1)
     strategy.harvest({"from": strategist})
 
     assert san_token_gauge.balanceOf(strategy) > 0

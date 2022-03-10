@@ -32,6 +32,7 @@ def test_shutdown(
 
     utils.set_0_vault_fees()
 
+    chain.sleep(1)
     strategy.harvest({"from": strategist})
 
     assert san_token_gauge.balanceOf(strategy) > 0
@@ -44,6 +45,7 @@ def test_shutdown(
     assert assets_at_t_plus_one > assets_at_t
 
     strategy.setEmergencyExit({"from": gov})
+    chain.sleep(1)
     strategy.harvest({"from": strategist})
     chain.mine(1)
 

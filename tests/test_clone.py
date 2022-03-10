@@ -57,6 +57,7 @@ def test_clone(
     assert san_token.balanceOf(strategy) == 0
 
     # First harvest
+    chain.sleep(1)
     strategy.harvest({"from": strategist})
 
     assert san_token_gauge.balanceOf(strategy) > 0
