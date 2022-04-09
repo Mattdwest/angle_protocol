@@ -30,7 +30,7 @@ contract StrategyAngleUSDC is BaseStrategy {
     bool public isOriginal = true;
 
     // variables for determining how much governance token to hold for voting rights
-    uint256 public constant _denominator = 10000;
+    uint256 public constant MAX_BPS = 10000;
     address public constant weth =
         address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
     uint256 public percentKeep;
@@ -85,9 +85,9 @@ contract StrategyAngleUSDC is BaseStrategy {
 
         IERC20(want).safeApprove(angleStableMaster, uint256(-1));
         IERC20(sanToken).safeApprove(sanTokenGauge, uint256(-1));
-        IERC20(want).safeApprove(sanToken, uint256(-1));
-        IERC20(sanToken).safeApprove(angleStableMaster, uint256(-1));
-        IERC20(angleToken).safeApprove(unirouter, uint256(-1));
+        // IERC20(want).safeApprove(sanToken, uint256(-1));
+        // IERC20(sanToken).safeApprove(angleStableMaster, uint256(-1));
+        IERC20(angleToken).approve(unirouter, uint256(-1));
     }
 
     function initialize(
@@ -163,7 +163,7 @@ contract StrategyAngleUSDC is BaseStrategy {
         return
             string(
                 abi.encodePacked(
-                    "Angle",
+                    "StrategyAngle",
                     IERC20Metadata(address(want)).symbol()
                 )
             );
@@ -190,9 +190,9 @@ contract StrategyAngleUSDC is BaseStrategy {
         uint256 _tokensAvailable = balanceOfAngleToken();
         if (_tokensAvailable > 0) {
             uint256 _tokensToGov =
-                _tokensAvailable.mul(percentKeep).div(_denominator);
+                _tokensAvailable.mul(percentKeep).div(MAX_BPS);
             if (_tokensToGov > 0) {
-                IERC20(angleToken).safeTransfer(treasury, _tokensToGov);
+                IERC20(angleToken).transfer(treasury, _tokensToGov);
             }
             uint256 _tokensRemain = balanceOfAngleToken();
             _swap(_tokensRemain, address(angleToken));
@@ -299,12 +299,7 @@ contract StrategyAngleUSDC is BaseStrategy {
             );
         }
 
-        IStableMaster(angleStableMaster).withdraw(
-            _amountInSanToken,
-            address(this),
-            address(this),
-            poolManager
-        );
+        withdrawFromStableMaster(_amountInSanToken);
     }
 
     // swaps rewarded tokens for want
@@ -330,7 +325,7 @@ contract StrategyAngleUSDC is BaseStrategy {
         IAngleGauge(sanTokenGauge).claim_rewards();
         IAngleGauge(sanTokenGauge).withdraw(balanceOfStake());
 
-        IERC20(sanToken).transfer(_newStrategy, balanceOfSanToken());
+        IERC20(sanToken).safeTransfer(_newStrategy, balanceOfSanToken());
         IERC20(angleToken).transfer(_newStrategy, balanceOfAngleToken());
     }
 
@@ -339,14 +334,7 @@ contract StrategyAngleUSDC is BaseStrategy {
         view
         override
         returns (address[] memory)
-    {
-        address[] memory protected = new address[](2);
-        // (aka want) is already protected by default
-        protected[0] = sanToken;
-        protected[1] = angleToken;
-
-        return protected;
-    }
+    {}
 
     // below for 0.4.3 upgrade
     function ethToWant(uint256 _amtInWei)
@@ -368,11 +356,16 @@ contract StrategyAngleUSDC is BaseStrategy {
     // ---------------------- SETTERS -----------------------
 
     function setKeepInBips(uint256 _percentKeep) external onlyVaultManagers {
+        require(
+            percentKeep <= MAX_BPS,
+            "_percentKeep can't be larger than 10,000"
+        );
         percentKeep = _percentKeep;
     }
 
     // where angleToken goes
     function setTreasury(address _treasury) external onlyVaultManagers {
+        require(_treasury != address(0), "!zero_address");
         treasury = _treasury;
     }
 
@@ -425,6 +418,15 @@ contract StrategyAngleUSDC is BaseStrategy {
     function depositToStableMaster(uint256 _amount) internal {
         IStableMaster(angleStableMaster).deposit(
             _amount,
+            address(this),
+            poolManager
+        );
+    }
+
+    function withdrawFromStableMaster(uint256 _amountInSanToken) internal {
+        IStableMaster(angleStableMaster).withdraw(
+            _amountInSanToken,
+            address(this),
             address(this),
             poolManager
         );
