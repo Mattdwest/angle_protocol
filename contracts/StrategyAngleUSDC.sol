@@ -357,7 +357,7 @@ contract StrategyAngleUSDC is BaseStrategy {
 
     function setKeepInBips(uint256 _percentKeep) external onlyVaultManagers {
         require(
-            percentKeep <= MAX_BPS,
+            _percentKeep <= MAX_BPS,
             "_percentKeep can't be larger than 10,000"
         );
         percentKeep = _percentKeep;
