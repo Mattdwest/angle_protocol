@@ -17,6 +17,7 @@ import {IERC20Metadata} from "@yearnvaults/contracts/yToken.sol";
 import "../interfaces/curve/ICurve.sol";
 import "../interfaces/Angle/IStableMaster.sol";
 import "../interfaces/Angle/IAngleGauge.sol";
+import "../interfaces/Angle/IVeAngle.sol";
 import "../interfaces/uniswap/IUni.sol";
 
 contract StrategyAngleUSDC is BaseStrategy {
@@ -34,13 +35,19 @@ contract StrategyAngleUSDC is BaseStrategy {
     address public constant weth =
         address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
     uint256 public percentKeep;
+    uint256 public percentSell;
+    uint256 public timeToLock;
     address public sanToken;
     address public angleToken;
+    address public veAngleToken;
     address public unirouter;
     address public angleStableMaster;
     address public sanTokenGauge;
     address public treasury;
     address public poolManager;
+
+    uint256 internal constant WEEK = 7 * 86_400;
+    uint256 internal constant FOUR_YEARS = 52 * WEEK * 4;
 
     constructor(
         address _vault,
@@ -80,6 +87,8 @@ contract StrategyAngleUSDC is BaseStrategy {
         poolManager = _poolManager;
 
         percentKeep = 1000;
+        percentSell = 4000;
+        timeToLock = WEEK; // 1 week default
         treasury = address(0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde);
         healthCheck = 0xDDCea799fF1699e98EDF118e0629A974Df7DF012;
 
@@ -174,6 +183,24 @@ contract StrategyAngleUSDC is BaseStrategy {
         return balanceOfWant().add(valueOfStake()).add(valueOfSanToken());
     }
 
+    function _withdrawVeAngle() internal {
+        IVeANGLE veAngle = IVeANGLE(veAngleToken);
+        IVeANGLE.LockedBalance memory currentLock = veAngle.locked(address(this));
+
+        if (currentLock.amount > 0 && currentLock.end <= block.timestamp) {
+            veAngle.withdraw();
+        }
+    }
+
+    function withdrawVeAngleManually() external onlyVaultManagers {
+        _withdrawVeAngle();
+    }
+
+    function setTimeToLock(uint256 _newTimeToLock) external onlyVaultManagers {
+        require(_newTimeToLock >= WEEK && _newTimeToLock <= FOUR_YEARS);
+        timeToLock = _newTimeToLock;
+    }
+
     function prepareReturn(uint256 _debtOutstanding)
         internal
         override
@@ -186,6 +213,7 @@ contract StrategyAngleUSDC is BaseStrategy {
         // First, claim & sell any rewards.
 
         IAngleGauge(sanTokenGauge).claim_rewards();
+        _withdrawVeAngle();
 
         uint256 _tokensAvailable = balanceOfAngleToken();
         if (_tokensAvailable > 0) {
@@ -194,8 +222,25 @@ contract StrategyAngleUSDC is BaseStrategy {
             if (_tokensToGov > 0) {
                 IERC20(angleToken).transfer(treasury, _tokensToGov);
             }
+            uint256 _tokensToSell =
+                _tokensAvailable.mul(percentSell).div(MAX_BPS);
+            if (_tokensToSell > 0) {
+                _swap(_tokensToSell, address(angleToken));
+            }
             uint256 _tokensRemain = balanceOfAngleToken();
-            _swap(_tokensRemain, address(angleToken));
+            if (_tokensRemain > 0) {
+                IVeANGLE veAngle = IVeANGLE(veAngleToken);
+                IVeANGLE.LockedBalance memory currentLock = veAngle.locked(address(this));
+                IERC20(angleToken).safeApprove(veAngleToken, _tokensRemain);
+                if (currentLock.amount > 0) {
+                    // Active lock -> increase amount
+                    veAngle.increase_amount(_tokensRemain);
+                } else {
+                    // No active lock -> Create lock
+                    veAngle.create_lock(_tokensRemain, block.timestamp + timeToLock);
+                }
+                IERC20(angleToken).safeApprove(veAngleToken, 0);
+            }
         }
 
         // Second, run initial profit + loss calculations.
@@ -324,6 +369,8 @@ contract StrategyAngleUSDC is BaseStrategy {
         // want is transferred by the base contract's migrate function
         IAngleGauge(sanTokenGauge).claim_rewards();
         IAngleGauge(sanTokenGauge).withdraw(balanceOfStake());
+        // veAngle are non-ttransferable so potentially not all will be withdrawn
+        _withdrawVeAngle();
 
         IERC20(sanToken).safeTransfer(_newStrategy, balanceOfSanToken());
         IERC20(angleToken).transfer(_newStrategy, balanceOfAngleToken());
@@ -363,6 +410,14 @@ contract StrategyAngleUSDC is BaseStrategy {
         percentKeep = _percentKeep;
     }
 
+    function setSellInBips(uint256 _percentSell) external onlyVaultManagers {
+        require(
+            _percentSell <= MAX_BPS,
+            "_percentSell can't be larger than 10,000"
+        );
+        percentSell = _percentSell;
+    }
+
     // where angleToken goes
     function setTreasury(address _treasury) external onlyVaultManagers {
         require(_treasury != address(0), "!zero_address");
@@ -385,6 +440,12 @@ contract StrategyAngleUSDC is BaseStrategy {
 
     function balanceOfAngleToken() public view returns (uint256) {
         return IERC20(angleToken).balanceOf(address(this));
+    }
+
+    function balanceLockedInVeAngle() public view returns (uint256) {
+        IVeANGLE veAngle = IVeANGLE(veAngleToken);
+        IVeANGLE.LockedBalance memory currentLock = veAngle.locked(address(this));
+        return uint256(currentLock.amount);
     }
 
     function valueOfSanToken() public view returns (uint256) {
