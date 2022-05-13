@@ -53,6 +53,7 @@ contract StrategyAngleUSDC is BaseStrategy {
         address _vault,
         address _sanToken,
         address _angleToken,
+        address _veAngleToken,
         address _unirouter,
         address _angleStableMaster,
         address _sanTokenGauge,
@@ -62,6 +63,7 @@ contract StrategyAngleUSDC is BaseStrategy {
         _initializeStrategy(
             _sanToken,
             _angleToken,
+            _veAngleToken,
             _unirouter,
             _angleStableMaster,
             _sanTokenGauge,
@@ -74,6 +76,7 @@ contract StrategyAngleUSDC is BaseStrategy {
     function _initializeStrategy(
         address _sanToken,
         address _angleToken,
+        address _veAngleToken,
         address _unirouter,
         address _angleStableMaster,
         address _sanTokenGauge,
@@ -81,6 +84,7 @@ contract StrategyAngleUSDC is BaseStrategy {
     ) internal {
         sanToken = _sanToken;
         angleToken = _angleToken;
+        veAngleToken = _veAngleToken;
         unirouter = _unirouter;
         angleStableMaster = _angleStableMaster;
         sanTokenGauge = _sanTokenGauge;
@@ -106,6 +110,7 @@ contract StrategyAngleUSDC is BaseStrategy {
         address _keeper,
         address _sanToken,
         address _angleToken,
+        address _veAngleToken,
         address _unirouter,
         address _angleStableMaster,
         address _sanTokenGauge,
@@ -115,6 +120,7 @@ contract StrategyAngleUSDC is BaseStrategy {
         _initializeStrategy(
             _sanToken,
             _angleToken,
+            _veAngleToken,
             _unirouter,
             _angleStableMaster,
             _sanTokenGauge,
@@ -129,6 +135,7 @@ contract StrategyAngleUSDC is BaseStrategy {
         address _keeper,
         address _sanToken,
         address _angleToken,
+        address _veAngleToken,
         address _unirouter,
         address _angleStableMaster,
         address _sanTokenGauge,
@@ -159,6 +166,7 @@ contract StrategyAngleUSDC is BaseStrategy {
             _keeper,
             _sanToken,
             _angleToken,
+            _veAngleToken,
             _unirouter,
             _angleStableMaster,
             _sanTokenGauge,
