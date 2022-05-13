@@ -124,6 +124,11 @@ def strategy(
     vault.addStrategy(strategy, 10_000, 0, 2 ** 256 - 1, 1_000, {"from": gov})
     yield strategy
 
+@pytest.fixture(scope="module", autouse=True)
+def add_strategy_veAngle_lockers(strategy, veAngle_whitelister):
+    whitelister_admin = veAngle_whitelister.admin()
+    veAngle_whitelister.approveWallet(strategy.address, {"from": whitelister_admin})
+
 
 # sushiswap router
 @pytest.fixture(scope="module", autouse=True)
@@ -174,6 +179,10 @@ def san_token_gauge():
 @pytest.fixture(scope="module", autouse=True)
 def pool_manager():
     yield Contract("0xe9f183FC656656f1F17af1F2b0dF79b8fF9ad8eD")
+
+@pytest.fixture(scope="module", autouse=True)
+def veAngle_whitelister():
+    yield Contract("0xAa241Ccd398feC742f463c534a610529dCC5888E")
 
 
 @pytest.fixture(scope="module", autouse=True)
