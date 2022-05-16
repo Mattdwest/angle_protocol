@@ -105,6 +105,7 @@ def strategy(
     gov,
     san_token,
     angle_token,
+    veangle_token,
     uni,
     angle_stable_master,
     san_token_gauge,
@@ -115,6 +116,7 @@ def strategy(
         vault,
         san_token,
         angle_token,
+        veangle_token,
         uni,
         angle_stable_master,
         san_token_gauge,
@@ -201,6 +203,7 @@ def newstrategy(
     gov,
     san_token,
     angle_token,
+    veangle_token,
     uni,
     angle_stable_master,
     san_token_gauge,
@@ -211,6 +214,7 @@ def newstrategy(
         vault,
         san_token,
         angle_token,
+        veangle_token,
         uni,
         angle_stable_master,
         san_token_gauge,
@@ -265,6 +269,7 @@ def utils(
     token,
     san_token_gauge,
     san_token,
+    veAngle_whitelister
 ):
     return Utils(
         chain,
@@ -277,6 +282,7 @@ def utils(
         token,
         san_token_gauge,
         san_token,
+        veAngle_whitelister
     )
 
 
@@ -293,6 +299,7 @@ class Utils:
         token,
         san_token_gauge,
         san_token,
+        veAngle_whitelister
     ):
         self.chain = chain
         self.pool_manager_account = pool_manager_account
@@ -304,6 +311,7 @@ class Utils:
         self.token = token
         self.san_token_gauge = san_token_gauge
         self.san_token = san_token
+        self.whitelister = veAngle_whitelister
 
     def mock_angle_slp_profits(self):
         max_profits_per_block = self.angle_stable_master.collateralMap(
@@ -326,3 +334,7 @@ class Utils:
         assert self.token.balanceOf(self.strategy) == 0
         assert self.san_token_gauge.balanceOf(self.strategy) == 0
         assert self.san_token.balanceOf(self.strategy) == 0
+    
+    def whitelist_strategy(self, _strategy):
+        whitelister_admin = self.whitelister.admin()
+        self.whitelister.approveWallet(_strategy, {"from": whitelister_admin})

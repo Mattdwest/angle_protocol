@@ -153,7 +153,7 @@ def test_almost_lossy_strat(
     assert san_token_gauge.balanceOf(strategy) > 0
     assets_at_t = strategy.estimatedTotalAssets()
 
-    chain.sleep(10 ** 10)
+    chain.sleep(10 ** 5)
     chain.mine(100)
 
     before_harvest_treasury_rewards_bal = angle_token.balanceOf(live_yearn_treasury)
@@ -226,7 +226,7 @@ def test_harvest_angle_rewards(
     assert san_token_gauge.balanceOf(strategy) > 0
     assets_at_t = strategy.estimatedTotalAssets()
 
-    chain.sleep(10 ** 10)
+    chain.sleep(10 ** 5)
     chain.mine(100)
 
     before_harvest_treasury_rewards_bal = angle_token.balanceOf(live_yearn_treasury)

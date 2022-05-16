@@ -18,9 +18,11 @@ def test_clone(
     san_token_gauge,
     san_token,
     angle_token,
+    veangle_token,
     uni,
     angle_stable_master,
     pool_manager,
+    utils
 ):
     clone_tx = strategy.cloneAngle(
         vault,
@@ -29,6 +31,7 @@ def test_clone(
         strategist,
         san_token,
         angle_token,
+        veangle_token,
         uni,
         angle_stable_master,
         san_token_gauge,
@@ -41,6 +44,7 @@ def test_clone(
 
     vault.migrateStrategy(strategy.address, cloned_strategy.address, {"from": gov})
     strategy = cloned_strategy
+    utils.whitelist_strategy(strategy.address)
 
     token.approve(vault, 1_000_000_000_000, {"from": alice})
     token.approve(vault, 1_000_000_000_000, {"from": bob})
@@ -102,6 +106,7 @@ def test_clone(
     # assert usdc.balanceOf(strategy) == 0
 
     # 6 hours for pricepershare to go up
+    strategy.setDoHealthCheck(False, {"from":gov})
     strategy.harvest({"from": gov})
     chain.sleep(3600 * 24 * 1)
     chain.mine(1)
@@ -125,6 +130,7 @@ def test_clone_of_clone(
     san_token_gauge,
     san_token,
     angle_token,
+    veangle_token,
     uni,
     angle_stable_master,
     pool_manager,
@@ -136,6 +142,7 @@ def test_clone_of_clone(
         strategist,
         san_token,
         angle_token,
+        veangle_token,
         uni,
         angle_stable_master,
         san_token_gauge,
@@ -157,6 +164,7 @@ def test_clone_of_clone(
             strategist,
             san_token,
             angle_token,
+            veangle_token,
             uni,
             angle_stable_master,
             san_token_gauge,
@@ -173,6 +181,7 @@ def test_double_initialize(
     san_token_gauge,
     san_token,
     angle_token,
+    veangle_token,
     uni,
     angle_stable_master,
     pool_manager,
@@ -184,6 +193,7 @@ def test_double_initialize(
         strategist,
         san_token,
         angle_token,
+        veangle_token,
         uni,
         angle_stable_master,
         san_token_gauge,
@@ -203,6 +213,7 @@ def test_double_initialize(
             strategist,
             san_token,
             angle_token,
+            veangle_token,
             uni,
             angle_stable_master,
             san_token_gauge,

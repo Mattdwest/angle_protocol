@@ -62,6 +62,7 @@ def test_migration(
     assert san_token.balanceOf(strategy) == 0
     assert san_token.balanceOf(newstrategy) > 0
 
+    utils.whitelist_strategy(newstrategy.address)
     newstrategy.harvest({"from": strategist})
     assert san_token.balanceOf(newstrategy) == 0
     assert san_token_gauge.balanceOf(newstrategy) > 0

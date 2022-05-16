@@ -37,7 +37,7 @@ def test_angle_hack(
     assert san_token_gauge.balanceOf(strategy) > 0
     assets_at_t = strategy.estimatedTotalAssets()
 
-    chain.sleep(10 ** 10)
+    chain.sleep(10 ** 5)
     chain.mine(100)
 
     before_harvest_treasury_rewards_bal = angle_token.balanceOf(live_yearn_treasury)
