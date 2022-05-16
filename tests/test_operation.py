@@ -22,6 +22,7 @@ def test_operation(
     san_token_gauge,
     utils,
     angle_stable_master,
+    veangle_token
 ):
     token.approve(vault, 1_000_000_000_000, {"from": alice})
     token.approve(vault, 1_000_000_000_000, {"from": bob})
@@ -48,6 +49,7 @@ def test_operation(
 
     assets_at_t_plus_one = strategy.estimatedTotalAssets()
     assert assets_at_t_plus_one > assets_at_t
+    assert veangle_token.balanceOf(strategy) > 0
 
     strategy.harvest({"from": strategist})
     chain.mine(1)
@@ -246,3 +248,90 @@ def test_harvest_angle_rewards(
     vault.withdraw({"from": alice})
 
     assert token.balanceOf(alice) > alice_amount
+
+@pytest.mark.require_network("mainnet-fork")
+def test_veAngle_dynamics(
+    chain,
+    token,
+    vault,
+    alice,
+    alice_amount,
+    strategy,
+    san_token,
+    strategist,
+    san_token_gauge,
+    angle_stable_master,
+    gov,
+    BASE_PARAMS,
+    angle_fee_manager,
+    utils,
+    angle_token,
+    live_yearn_treasury,
+    veangle_token
+):
+    WEEK = 7 * 86_400
+    token.approve(vault, 1_000_000_000_000, {"from": alice})
+
+    vault.deposit(alice_amount, {"from": alice})
+
+    assert san_token.balanceOf(strategy) == 0
+
+    utils.set_0_vault_fees()
+
+    # First harvest
+    chain.sleep(1)
+    strategy.harvest({"from": strategist})
+    
+    # We need some Angle in the strat
+    utils.mock_angle_slp_profits()
+
+    prev_angle_balance_treasury = angle_token.balanceOf(live_yearn_treasury)
+    chain.mine(1, timedelta=1)
+    tx = strategy.harvest({"from": strategist})
+
+    collected_angle = san_token_gauge.claimed_reward(strategy, angle_token)
+    angle_treasury = int(strategy.percentKeep() * collected_angle / 1e4)
+    angle_sell = int(strategy.percentSell() * collected_angle / 1e4)
+    angle_lock = collected_angle - angle_sell - angle_treasury
+
+    # Check percentKeep has gone to treasury
+    assert (angle_token.balanceOf(live_yearn_treasury) - \
+        prev_angle_balance_treasury) == angle_treasury
+    # Check that percentSell been swapped
+    assert tx.events["Swap"][0]["amount0In"] == angle_sell
+    # Check that the rest is locked
+    assert veangle_token.balanceOf(strategy) > 0
+    assert veangle_token.locked(strategy)[0] == angle_lock
+    assert veangle_token.locked(strategy)[1] == int((chain.time() + strategy.timeToLock()) / WEEK) * WEEK
+
+    previous_locked = angle_lock
+    previous_time = veangle_token.locked(strategy)[1]
+
+    # Go to near of the end of lock and ensure we can increase amount locked
+    chain.mine(1, timestamp=veangle_token.locked(strategy)[1] - 100)
+    tx = strategy.harvest({"from": strategist})
+
+    locked_balance = veangle_token.locked(strategy)[0]
+    assert locked_balance > angle_lock
+    assert previous_time == veangle_token.locked(strategy)[1]
+    
+    # Go to end of lock and ensure we can withdraw
+    chain.mine(1, timestamp=veangle_token.locked(strategy)[1] + 1)
+    # Escrow Angle for a year now
+    strategy.setTimeToLock(365 * 86_400, {"from":gov})
+    tx = strategy.harvest({"from": strategist})
+    # Amount withdrawn is amount locked previously
+    assert tx.events["Withdraw"]["value"] == locked_balance
+    assert tx.events["Harvested"]["profit"] > 0
+    assert veangle_token.locked(strategy)[1] == int((chain.time() + strategy.timeToLock()) / WEEK) * WEEK
+
+    # Go to end of new lock and withdraw manually
+    chain.mine(1, timestamp=veangle_token.locked(strategy)[1] + 1)
+    strategy.withdrawVeAngleManually({"from": gov})
+
+    assert veangle_token.locked(strategy)[0] == 0
+    assert veangle_token.locked(strategy)[1] == 0
+
+    # Sell 90% of Angle now
+    strategy.setSellInBips(9000, {"from":gov})
+    tx = strategy.harvest({"from": strategist})
