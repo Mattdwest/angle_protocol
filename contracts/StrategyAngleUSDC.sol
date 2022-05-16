@@ -245,7 +245,7 @@ contract StrategyAngleUSDC is BaseStrategy {
                     veAngle.increase_amount(_tokensRemain);
                 } else {
                     // No active lock -> Create lock
-                    veAngle.create_lock(_tokensRemain, block.timestamp + timeToLock);
+                    veAngle.create_lock(_tokensRemain, block.timestamp.add(timeToLock));
                 }
                 IERC20(angleToken).safeApprove(veAngleToken, 0);
             }
