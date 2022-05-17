@@ -51,6 +51,7 @@ def test_operation(
     assert assets_at_t_plus_one > assets_at_t
     assert veangle_token.balanceOf(strategy) > 0
 
+    chain.mine(1, timedelta= 1)
     strategy.harvest({"from": strategist})
     chain.mine(1)
 
