@@ -270,6 +270,7 @@ def test_veAngle_dynamics(
     veangle_token
 ):
     WEEK = 7 * 86_400
+    YEAR = WEEK * 52
     token.approve(vault, 1_000_000_000_000, {"from": alice})
 
     vault.deposit(alice_amount, {"from": alice})
@@ -318,7 +319,7 @@ def test_veAngle_dynamics(
     # Go to end of lock and ensure we can withdraw
     chain.mine(1, timestamp=veangle_token.locked(strategy)[1] + 1)
     # Escrow Angle for a year now
-    strategy.setTimeToLock(365 * 86_400, {"from":gov})
+    strategy.setTimeToLock(YEAR, {"from":gov})
     tx = strategy.harvest({"from": strategist})
     # Amount withdrawn is amount locked previously
     assert tx.events["Withdraw"]["value"] == locked_balance
