@@ -31,6 +31,7 @@ def test_migration(
     pool_manager,
     newstrategy,
     utils,
+    veangle_token
 ):
     token.approve(vault, 1_000_000_000_000, {"from": alice})
     token.approve(vault, 1_000_000_000_000, {"from": bob})
@@ -54,11 +55,18 @@ def test_migration(
     assets_at_t_plus_one = strategy.estimatedTotalAssets()
     assert assets_at_t_plus_one > assets_at_t
 
+    # Harvest to lock some Angle
+    strategy.harvest({"from": strategist})
+    assert veangle_token.balanceOf(strategy) > 0
+    assert veangle_token.locked(strategy)[0] > 0
+    chain.mine(1, timestamp = veangle_token.locked(strategy)[1]+1)
+
     assert san_token_gauge.balanceOf(newstrategy) == 0
 
     newstrategy.setStrategist(strategist)
     vault.migrateStrategy(strategy, newstrategy, {"from": gov})
 
+    assert veangle_token.locked(strategy) == (0,0)
     assert san_token.balanceOf(strategy) == 0
     assert san_token.balanceOf(newstrategy) > 0
 
