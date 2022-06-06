@@ -61,20 +61,6 @@ def test_central_voter(
     assets_at_t_plus_one = strategy.estimatedTotalAssets()
     assert assets_at_t_plus_one > assets_at_t
 
-    chain.mine(1, timedelta=100)
-    strategy.harvest({"from": strategist})
-    chain.mine(1)
-
-    vault.withdraw({"from": alice})
-    assert token.balanceOf(alice) > alice_amount
-    assert token.balanceOf(bob) == 0
-
-    vault.withdraw({"from": bob})
-    assert token.balanceOf(bob) > bob_amount
-
-    vault.withdraw({"from": tinytim})
-    assert token.balanceOf(tinytim) > tinytim_amount
-
     whitelister = Contract(veangle_token.smart_wallet_checker())
     whitelister.approveWallet(deploy_angle_voter, {"from": whitelister.admin()})
 
@@ -91,3 +77,8 @@ def test_central_voter(
     lock_rest = angle_balance - lock_now
     deploy_strategy_proxy.increaseAmount(lock_rest, {"from": gov})
     assert veangle_token.locked(deploy_angle_voter)[0] == angle_balance
+
+    utils.mock_angle_slp_profits()
+
+    strategy.harvest({"from": strategist})
+    
