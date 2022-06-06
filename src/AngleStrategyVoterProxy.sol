@@ -70,9 +70,18 @@ contract AngleStrategyVoterProxy {
         voters[_voter] = false;
     }
 
-    function lock() external {
-        uint256 amount = IERC20(angle).balanceOf(address(yearnAngleVoter));
-        if (amount > 0) yearnAngleVoter.increaseAmount(amount);
+    function lock(uint256 amount, uint256 unlockTime) external {
+        if (amount > 0) {
+            IERC20(angle).transfer(address(yearnAngleVoter), amount);
+            yearnAngleVoter.createLock(amount, unlockTime);
+        }
+    }
+
+    function increaseAmount(uint256 amount) external {
+        if (amount > 0) {
+            IERC20(angle).transfer(address(yearnAngleVoter), amount);
+            yearnAngleVoter.increaseAmount(amount);
+        }
     }
 
     function vote(address _gauge, uint256 _amount) public {
