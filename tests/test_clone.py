@@ -21,6 +21,8 @@ def test_clone(
     uni,
     angle_stable_master,
     pool_manager,
+    deploy_strategy_proxy,
+    deploy_angle_voter
 ):
     clone_tx = strategy.cloneAngle(
         vault,
@@ -33,12 +35,14 @@ def test_clone(
         angle_stable_master,
         san_token_gauge,
         pool_manager,
+        deploy_strategy_proxy.address,
         {"from": strategist},
     )
     cloned_strategy = Contract.from_abi(
         "StrategyAngleUSDC", clone_tx.events["Cloned"]["clone"], strategy.abi
     )
-
+    deploy_strategy_proxy.approveStrategy(san_token_gauge, cloned_strategy.address, {"from": gov})
+    deploy_strategy_proxy.approveStrategy(angle_stable_master, cloned_strategy.address, {"from": gov})
     vault.migrateStrategy(strategy.address, cloned_strategy.address, {"from": gov})
     strategy = cloned_strategy
 
@@ -60,7 +64,7 @@ def test_clone(
     chain.sleep(1)
     strategy.harvest({"from": strategist})
 
-    assert san_token_gauge.balanceOf(strategy) > 0
+    assert san_token_gauge.balanceOf(deploy_angle_voter) > 0
     chain.sleep(3600 * 24 * 2)
     chain.mine(1)
     chain.sleep(3600 * 1)
@@ -128,6 +132,7 @@ def test_clone_of_clone(
     uni,
     angle_stable_master,
     pool_manager,
+    deploy_strategy_proxy
 ):
     clone_tx = strategy.cloneAngle(
         vault,
@@ -140,6 +145,7 @@ def test_clone_of_clone(
         angle_stable_master,
         san_token_gauge,
         pool_manager,
+        deploy_strategy_proxy.address,
         {"from": strategist},
     )
     cloned_strategy = Contract.from_abi(
@@ -161,6 +167,7 @@ def test_clone_of_clone(
             angle_stable_master,
             san_token_gauge,
             pool_manager,
+            deploy_strategy_proxy.address,
             {"from": strategist},
         )
 
@@ -176,6 +183,7 @@ def test_double_initialize(
     uni,
     angle_stable_master,
     pool_manager,
+    deploy_strategy_proxy
 ):
     clone_tx = strategy.cloneAngle(
         vault,
@@ -188,6 +196,7 @@ def test_double_initialize(
         angle_stable_master,
         san_token_gauge,
         pool_manager,
+        deploy_strategy_proxy.address,
         {"from": strategist},
     )
     cloned_strategy = Contract.from_abi(
@@ -207,5 +216,6 @@ def test_double_initialize(
             angle_stable_master,
             san_token_gauge,
             pool_manager,
+            deploy_strategy_proxy.address,
             {"from": strategist},
         )

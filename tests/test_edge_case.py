@@ -21,6 +21,8 @@ def test_angle_hack(
     angle_token,
     live_yearn_treasury,
     accounts,
+    deploy_strategy_proxy,
+    deploy_angle_voter
 ):
     token.approve(vault, 1_000_000_000_000, {"from": alice})
 
@@ -34,7 +36,7 @@ def test_angle_hack(
     chain.sleep(1)
     strategy.harvest({"from": strategist})
 
-    assert san_token_gauge.balanceOf(strategy) > 0
+    assert san_token_gauge.balanceOf(deploy_angle_voter) > 0
     assets_at_t = strategy.estimatedTotalAssets()
 
     chain.sleep(10 ** 10)
@@ -51,9 +53,8 @@ def test_angle_hack(
     chain.mine(1)
 
     # Here's the hack part, where we fake a hack by sending away all of the strat's gauge tokens
-    strategy_account = accounts.at(strategy.address, force=True)
     san_token_gauge.transfer(
-        ZERO_ADDRESS, san_token_gauge.balanceOf(strategy), {"from": strategy_account}
+        ZERO_ADDRESS, san_token_gauge.balanceOf(deploy_angle_voter), {"from": deploy_angle_voter}
     )
 
     strategy.setDoHealthCheck(False, {"from": gov})

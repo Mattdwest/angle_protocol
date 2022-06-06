@@ -27,6 +27,8 @@ def test_sequential(
     san_token_gauge,
     utils,
     angle_stable_master,
+    deploy_strategy_proxy,
+    deploy_angle_voter
 ):
     token.approve(vault, 1_000_000_000_000, {"from": bob})
     token.approve(vault, 1_000_000_000_000, {"from": alice})
@@ -44,7 +46,7 @@ def test_sequential(
     chain.sleep(1)
     strategy.harvest({"from": strategist})
 
-    assert san_token_gauge.balanceOf(strategy) > 0
+    assert san_token_gauge.balanceOf(deploy_angle_voter) > 0
     assets_at_t = strategy.estimatedTotalAssets()
 
     utils.mock_angle_slp_profits()

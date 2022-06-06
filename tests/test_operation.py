@@ -1,3 +1,4 @@
+from datetime import timedelta
 import pytest
 
 from brownie import Wei, accounts, Contract, config, ZERO_ADDRESS
@@ -22,6 +23,8 @@ def test_operation(
     san_token_gauge,
     utils,
     angle_stable_master,
+    deploy_strategy_proxy,
+    deploy_angle_voter
 ):
     token.approve(vault, 1_000_000_000_000, {"from": alice})
     token.approve(vault, 1_000_000_000_000, {"from": bob})
@@ -40,7 +43,9 @@ def test_operation(
     chain.sleep(1)
     strategy.harvest({"from": strategist})
 
-    assert san_token_gauge.balanceOf(strategy) > 0
+    assert san_token_gauge.balanceOf(strategy) == 0
+    assert san_token_gauge.balanceOf(deploy_strategy_proxy) == 0
+    assert san_token_gauge.balanceOf(deploy_angle_voter) > 0
     assets_at_t = strategy.estimatedTotalAssets()
 
     utils.mock_angle_slp_profits()
@@ -49,6 +54,7 @@ def test_operation(
     assets_at_t_plus_one = strategy.estimatedTotalAssets()
     assert assets_at_t_plus_one > assets_at_t
 
+    chain.mine(1, timedelta=100)
     strategy.harvest({"from": strategist})
     chain.mine(1)
 
@@ -79,6 +85,8 @@ def test_lossy_strat(
     angle_fee_manager,
     utils,
     chain,
+    deploy_strategy_proxy,
+    deploy_angle_voter
 ):
     token.approve(vault, 1_000_000_000_000, {"from": alice})
 
@@ -92,7 +100,9 @@ def test_lossy_strat(
     chain.sleep(1)
     strategy.harvest({"from": strategist})
 
-    assert san_token_gauge.balanceOf(strategy) > 0
+    assert san_token_gauge.balanceOf(strategy) == 0
+    assert san_token_gauge.balanceOf(deploy_strategy_proxy) == 0
+    assert san_token_gauge.balanceOf(deploy_angle_voter) > 0
     assets_at_t = strategy.estimatedTotalAssets()
 
     utils.mock_angle_slp_profits()
@@ -137,6 +147,8 @@ def test_almost_lossy_strat(
     angle_token,
     angle_token_whale,
     live_yearn_treasury,
+    deploy_strategy_proxy,
+    deploy_angle_voter
 ):
     token.approve(vault, 1_000_000_000_000, {"from": alice})
 
@@ -150,7 +162,7 @@ def test_almost_lossy_strat(
     chain.sleep(1)
     strategy.harvest({"from": strategist})
 
-    assert san_token_gauge.balanceOf(strategy) > 0
+    assert san_token_gauge.balanceOf(deploy_angle_voter) > 0
     assets_at_t = strategy.estimatedTotalAssets()
 
     chain.sleep(10 ** 10)
@@ -210,6 +222,8 @@ def test_harvest_angle_rewards(
     utils,
     angle_token,
     live_yearn_treasury,
+    deploy_strategy_proxy,
+    deploy_angle_voter
 ):
     token.approve(vault, 1_000_000_000_000, {"from": alice})
 
@@ -223,7 +237,7 @@ def test_harvest_angle_rewards(
     chain.sleep(1)
     strategy.harvest({"from": strategist})
 
-    assert san_token_gauge.balanceOf(strategy) > 0
+    assert san_token_gauge.balanceOf(deploy_angle_voter) > 0
     assets_at_t = strategy.estimatedTotalAssets()
 
     chain.sleep(10 ** 10)

@@ -1,5 +1,5 @@
 import pytest
-from brownie import config, Contract
+from brownie import config, Contract, AngleStrategyProxy, YearnAngleVoter
 
 # # Snapshots the chain before each test and reverts after test completion.
 @pytest.fixture(autouse=True)
@@ -94,6 +94,24 @@ def vault(pm, gov, rewards, guardian, management, token):
     vault.setManagement(management, {"from": gov})
     yield vault
 
+@pytest.fixture(scope ="module")
+def deploy_strategy_proxy(
+    deploy_angle_voter,
+    gov,
+    AngleStrategyProxy
+):
+    strategy_proxy = gov.deploy(AngleStrategyProxy, deploy_angle_voter.address)
+    yield strategy_proxy
+
+
+@pytest.fixture(scope ="module")
+def deploy_angle_voter(
+    gov,
+    YearnAngleVoter
+ ):
+    voter = gov.deploy(YearnAngleVoter)
+    yield voter
+
 
 @pytest.fixture(scope="module", autouse=True)
 def strategy(
@@ -109,6 +127,8 @@ def strategy(
     angle_stable_master,
     san_token_gauge,
     pool_manager,
+    deploy_strategy_proxy,
+    deploy_angle_voter
 ):
     strategy = strategist.deploy(
         StrategyAngleUSDC,
@@ -119,9 +139,13 @@ def strategy(
         angle_stable_master,
         san_token_gauge,
         pool_manager,
+        deploy_strategy_proxy.address
     )
     strategy.setKeeper(keeper, {"from": gov})
     vault.addStrategy(strategy, 10_000, 0, 2 ** 256 - 1, 1_000, {"from": gov})
+    deploy_strategy_proxy.approveStrategy(san_token_gauge, strategy.address, {"from": gov})
+    deploy_strategy_proxy.approveStrategy(angle_stable_master, strategy.address, {"from": gov})
+    deploy_angle_voter.setStrategy(deploy_strategy_proxy.address, {"from": gov})
     yield strategy
 
 
@@ -196,6 +220,8 @@ def newstrategy(
     angle_stable_master,
     san_token_gauge,
     pool_manager,
+    deploy_strategy_proxy,
+    deploy_angle_voter
 ):
     newstrategy = guardian.deploy(
         StrategyAngleUSDC,
@@ -206,8 +232,12 @@ def newstrategy(
         angle_stable_master,
         san_token_gauge,
         pool_manager,
+        deploy_strategy_proxy.address,
     )
     newstrategy.setKeeper(keeper)
+    deploy_strategy_proxy.approveStrategy(san_token_gauge, newstrategy.address, {"from": gov})
+    deploy_strategy_proxy.approveStrategy(angle_stable_master, newstrategy.address, {"from": gov})
+    deploy_angle_voter.setStrategy(deploy_strategy_proxy.address, {"from": gov})
     yield newstrategy
 
 
