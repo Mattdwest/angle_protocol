@@ -44,7 +44,8 @@ contract StrategyCloneTest is StrategyFixture {
                 keeper,
                 sanTokenAddrs[_tokenSymbol], 
                 gaugeAddrs[_tokenSymbol],
-                poolManagerAddrs[_tokenSymbol]
+                poolManagerAddrs[_tokenSymbol],
+                address(voterProxy)
             );
 
             vm.prank(gov);
@@ -103,7 +104,8 @@ contract StrategyCloneTest is StrategyFixture {
                 keeper,
                 sanTokenAddrs[_tokenSymbol], 
                 gaugeAddrs[_tokenSymbol],
-                poolManagerAddrs[_tokenSymbol]
+                poolManagerAddrs[_tokenSymbol],
+                address(voterProxy)
             );
 
             vm.prank(gov);
@@ -119,7 +121,8 @@ contract StrategyCloneTest is StrategyFixture {
                 keeper,
                 sanTokenAddrs[_tokenSymbol], 
                 gaugeAddrs[_tokenSymbol],
-                poolManagerAddrs[_tokenSymbol]
+                poolManagerAddrs[_tokenSymbol],
+                address(voterProxy)
             );
         }
     }
@@ -151,7 +154,8 @@ contract StrategyCloneTest is StrategyFixture {
                 keeper,
                 sanTokenAddrs[_tokenSymbol], 
                 gaugeAddrs[_tokenSymbol],
-                poolManagerAddrs[_tokenSymbol]
+                poolManagerAddrs[_tokenSymbol],
+                address(voterProxy)
             );
 
             vm.prank(gov);
@@ -167,7 +171,8 @@ contract StrategyCloneTest is StrategyFixture {
                 keeper,
                 sanTokenAddrs[_tokenSymbol], 
                 gaugeAddrs[_tokenSymbol],
-                poolManagerAddrs[_tokenSymbol]
+                poolManagerAddrs[_tokenSymbol],
+                address(voterProxy)
             );
         }
     }
