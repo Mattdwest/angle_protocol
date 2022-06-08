@@ -23,7 +23,7 @@ contract YearnAngleVoter {
     
     address public governance;
     address public pendingGovernance;
-    address public strategy;
+    address public proxy;
     
     constructor() public {
         governance = address(0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52);
@@ -33,27 +33,27 @@ contract YearnAngleVoter {
         return "YearnAngleVoter";
     }
     
-    function setStrategy(address _strategy) external {
+    function setProxy(address _proxy) external {
         require(msg.sender == governance, "!governance");
-        strategy = _strategy;
+        proxy = _proxy;
     }
     
     function createLock(uint256 _value, uint256 _unlockTime) external {
-        require(msg.sender == strategy || msg.sender == governance, "!authorized");
+        require(msg.sender == proxy || msg.sender == governance, "!authorized");
         IERC20(angle).safeApprove(veAngle, 0);
         IERC20(angle).safeApprove(veAngle, _value);
         IVoteEscrow(veAngle).create_lock(_value, _unlockTime);
     }
     
     function increaseAmount(uint _value) external {
-        require(msg.sender == strategy || msg.sender == governance, "!authorized");
+        require(msg.sender == proxy || msg.sender == governance, "!authorized");
         IERC20(angle).safeApprove(veAngle, 0);
         IERC20(angle).safeApprove(veAngle, _value);
         IVoteEscrow(veAngle).increase_amount(_value);
     }
     
     function release() external {
-        require(msg.sender == strategy || msg.sender == governance, "!authorized");
+        require(msg.sender == proxy || msg.sender == governance, "!authorized");
         IVoteEscrow(veAngle).withdraw();
     }
     
@@ -69,7 +69,7 @@ contract YearnAngleVoter {
     }
     
     function execute(address to, uint value, bytes calldata data) external returns (bool, bytes memory) {
-        require(msg.sender == strategy || msg.sender == governance, "!governance");
+        require(msg.sender == proxy || msg.sender == governance, "!governance");
         (bool success, bytes memory result) = to.call.value(value)(data);
         
         return (success, result);
