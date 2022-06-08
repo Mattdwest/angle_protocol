@@ -95,6 +95,10 @@ contract Strategy is BaseStrategy {
         strategyProxy = AngleStrategyVoterProxy(_strategyProxy);
 
         percentKeep = 1000;
+<<<<<<< HEAD:src/Strategy.sol
+=======
+        treasury = address(0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde);
+>>>>>>> b1e4049 (fix: remove percentLock setter):contracts/StrategyAngleUSDC.sol
         healthCheck = 0xDDCea799fF1699e98EDF118e0629A974Df7DF012;
         doHealthCheck = true;
 
@@ -468,6 +472,14 @@ contract Strategy is BaseStrategy {
         percentKeep = _percentKeep;
     }
 
+<<<<<<< HEAD:src/Strategy.sol
+=======
+    // where angleToken goes
+    function setTreasury(address _treasury) external onlyVaultManagers {
+        require(_treasury != address(0), "!zero_address");
+        treasury = _treasury;
+    }
+>>>>>>> b1e4049 (fix: remove percentLock setter):contracts/StrategyAngleUSDC.sol
 
     // ----------------- SUPPORT & UTILITY FUNCTIONS ----------
 
