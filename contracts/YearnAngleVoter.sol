@@ -25,7 +25,7 @@ contract YearnAngleVoter {
     address public strategy;
     
     constructor() public {
-        governance = msg.sender;
+        governance = address(0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52);
     }
     
     function getName() external pure returns (string memory) {

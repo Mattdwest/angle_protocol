@@ -45,7 +45,7 @@ contract AngleStrategyProxy {
     uint256 lastTimeCursor;
 
     constructor(address _voter) public {
-        governance = msg.sender;
+        governance = address(0xFEB4acf3df3cDEA7399794D0869ef76A6EfAff52);
         yearnAngleVoter = YearnAngleVoter(_voter);
     }
 
