@@ -341,11 +341,24 @@ contract Strategy is BaseStrategy {
 
     // transfers all tokens to new strategy
     function prepareMigration(address _newStrategy) internal override {
+<<<<<<< HEAD:src/Strategy.sol
         // want is transferred by the base contract's migrate function
         sanTokenGauge.withdraw(balanceOfStakedSanToken());
 
         IERC20(sanToken).safeTransfer(_newStrategy, IERC20(sanToken).balanceOf(address(this)));
         IERC20(angleToken).transfer(_newStrategy, balanceOfAngleToken());
+=======
+        uint256 _angleBalance = balanceOfAngleToken();
+        if(_angleBalance > 0) {
+            IERC20(angleToken).safeTransfer(_newStrategy, _angleBalance);
+        }
+        uint256 _stakedBalance = balanceOfStake();
+        if (_stakedBalance > 0) {
+            strategyProxy.withdraw(sanTokenGauge, sanToken, _stakedBalance);
+            IERC20(sanToken).safeTransfer(address(strategyProxy), _stakedBalance);
+            withdrawFromStableMaster(_stakedBalance);
+        }
+>>>>>>> 8372725 (feat: changed prepareMigration logic to convert back to want):contracts/StrategyAngleUSDC.sol
     }
 
     function protectedTokens()
