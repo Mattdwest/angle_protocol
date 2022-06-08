@@ -22,6 +22,7 @@ contract YearnAngleVoter {
     address constant public veAngle = address(0x0C462Dbb9EC8cD1630f1728B2CFD2769d09f0dd5);
     
     address public governance;
+    address public pendingGovernance;
     address public strategy;
     
     constructor() public {
@@ -58,7 +59,13 @@ contract YearnAngleVoter {
     
     function setGovernance(address _governance) external {
         require(msg.sender == governance, "!governance");
-        governance = _governance;
+        pendingGovernance = _governance;
+    }
+
+    function acceptGovernance() external {
+        require(msg.sender == pendingGovernance, "!pending_governance");
+        governance = msg.sender;
+        pendingGovernance = address(0);
     }
     
     function execute(address to, uint value, bytes calldata data) external returns (bool, bytes memory) {
