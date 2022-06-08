@@ -88,7 +88,6 @@ contract StrategyAngleUSDC is BaseStrategy {
         strategyProxy = AngleStrategyProxy(_strategyProxy);
 
         percentKeep = 1000;
-        percentLock = 5000;
         treasury = address(0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde);
         healthCheck = 0xDDCea799fF1699e98EDF118e0629A974Df7DF012;
 
@@ -381,14 +380,6 @@ contract StrategyAngleUSDC is BaseStrategy {
             "_percentKeep can't be larger than 10,000"
         );
         percentKeep = _percentKeep;
-    }
-
-    function setLockInBips(uint256 _percentLock) external onlyVaultManagers {
-        require(
-            _percentLock <= MAX_BPS,
-            "_percentLock can't be larger than 10,000"
-        );
-        percentLock = _percentLock;
     }
 
     // where angleToken goes
