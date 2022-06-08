@@ -41,12 +41,21 @@ contract Strategy is BaseStrategy {
 
     // variable for determining how much governance token to hold for voting rights
     uint256 public percentKeep;
+<<<<<<< HEAD:src/Strategy.sol
     IERC20 public sanToken;
     IAngleGauge public sanTokenGauge;
     address public constant treasury = 0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde; // To change this, migrate
     address public constant unirouter = 0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F; // SushiSwap
     address public constant usdt = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
     address public constant weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
+=======
+    address public sanToken;
+    address public angleToken;
+    address public unirouter;
+    address public angleStableMaster;
+    address public sanTokenGauge;
+    address public treasury;
+>>>>>>> f5f31cf (fix: remove percentLock):contracts/StrategyAngleUSDC.sol
     address public poolManager;
     address public tradeFactory = address(0);
 
@@ -183,7 +192,26 @@ contract Strategy is BaseStrategy {
             uint256 _debtPayment
         )
     {
+<<<<<<< HEAD:src/Strategy.sol
         // Run initial profit + loss calculations.
+=======
+        // First, claim & sell any rewards.
+
+        // IAngleGauge(sanTokenGauge).claim_rewards();
+        strategyProxy.claimRewards(sanTokenGauge, angleToken);
+
+        uint256 _tokensAvailable = balanceOfAngleToken();
+        if (_tokensAvailable > 0) {
+            uint256 _tokensToKeep =
+                _tokensAvailable.mul(percentKeep).div(MAX_BPS);
+            if (_tokensToKeep > 0) {
+                IERC20(angleToken).transfer(address(strategyProxy), _tokensToKeep);
+                _swap(_tokensAvailable.sub(_tokensToKeep), address(angleToken));
+            }
+        }
+
+        // Second, run initial profit + loss calculations.
+>>>>>>> f5f31cf (fix: remove percentLock):contracts/StrategyAngleUSDC.sol
 
         uint256 _totalAssets = estimatedTotalAssets();
         uint256 _totalDebt = vault.strategies(address(this)).totalDebt;
