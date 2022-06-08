@@ -31,8 +31,8 @@ def test_migration(
     pool_manager,
     newstrategy,
     utils,
-    deploy_strategy_proxy,
-    deploy_angle_voter
+    strategy_proxy,
+    angle_voter
 ):
     token.approve(vault, 1_000_000_000_000, {"from": alice})
     token.approve(vault, 1_000_000_000_000, {"from": bob})
@@ -48,7 +48,7 @@ def test_migration(
     chain.sleep(1)
     strategy.harvest({"from": strategist})
 
-    assert san_token_gauge.balanceOf(deploy_angle_voter) > 0
+    assert san_token_gauge.balanceOf(angle_voter) > 0
     assets_at_t = strategy.estimatedTotalAssets()
 
     utils.mock_angle_slp_profits()
@@ -58,12 +58,12 @@ def test_migration(
 
     assert san_token_gauge.balanceOf(strategy) == 0
     assert san_token_gauge.balanceOf(newstrategy) == 0
-    assert san_token_gauge.balanceOf(deploy_angle_voter) > 0
+    assert san_token_gauge.balanceOf(angle_voter) > 0
 
     newstrategy.setStrategist(strategist)
     vault.migrateStrategy(strategy, newstrategy, {"from": gov})
-    deploy_strategy_proxy.approveStrategy(san_token_gauge, newstrategy.address, {"from": gov})
-    deploy_strategy_proxy.approveStrategy(angle_stable_master, newstrategy.address, {"from": gov})
+    strategy_proxy.approveStrategy(san_token_gauge, newstrategy.address, {"from": gov})
+    strategy_proxy.approveStrategy(angle_stable_master, newstrategy.address, {"from": gov})
 
     assert san_token.balanceOf(strategy) == 0
     assert san_token.balanceOf(newstrategy) == 0
@@ -71,4 +71,4 @@ def test_migration(
     newstrategy.harvest({"from": strategist})
     assert san_token.balanceOf(newstrategy) == 0
     assert san_token_gauge.balanceOf(newstrategy) == 0
-    assert san_token_gauge.balanceOf(deploy_angle_voter) > 0
+    assert san_token_gauge.balanceOf(angle_voter) > 0

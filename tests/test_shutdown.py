@@ -21,7 +21,7 @@ def test_shutdown(
     angle_stable_master,
     BASE_PARAMS,
     angle_fee_manager,
-    deploy_angle_voter
+    angle_voter
 ):
     token.approve(vault, 1_000_000_000_000, {"from": alice})
     token.approve(vault, 1_000_000_000_000, {"from": bob})
@@ -36,7 +36,7 @@ def test_shutdown(
     chain.sleep(1)
     strategy.harvest({"from": strategist})
 
-    assert san_token_gauge.balanceOf(deploy_angle_voter) > 0
+    assert san_token_gauge.balanceOf(angle_voter) > 0
     assets_at_t = strategy.estimatedTotalAssets()
 
     utils.mock_angle_slp_profits()
