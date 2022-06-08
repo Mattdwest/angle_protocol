@@ -145,7 +145,7 @@ def strategy(
     vault.addStrategy(strategy, 10_000, 0, 2 ** 256 - 1, 1_000, {"from": gov})
     strategy_proxy.approveStrategy(san_token_gauge, strategy, {"from": gov})
     strategy_proxy.approveStrategy(angle_stable_master, strategy, {"from": gov})
-    angle_voter.setStrategy(strategy_proxy, {"from": gov})
+    angle_voter.setProxy(strategy_proxy, {"from": gov})
     yield strategy
 
 
@@ -237,7 +237,7 @@ def newstrategy(
     newstrategy.setKeeper(keeper)
     strategy_proxy.approveStrategy(san_token_gauge, newstrategy, {"from": gov})
     strategy_proxy.approveStrategy(angle_stable_master, newstrategy, {"from": gov})
-    angle_voter.setStrategy(strategy_proxy, {"from": gov})
+    angle_voter.setProxy(strategy_proxy, {"from": gov})
     yield newstrategy
 
 
