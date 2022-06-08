@@ -38,7 +38,6 @@ contract StrategyAngleUSDC is BaseStrategy {
     address public constant weth =
         address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
     uint256 public percentKeep;
-    uint256 public percentLock;
     address public sanToken;
     address public angleToken;
     address public unirouter;
@@ -204,19 +203,12 @@ contract StrategyAngleUSDC is BaseStrategy {
 
         uint256 _tokensAvailable = balanceOfAngleToken();
         if (_tokensAvailable > 0) {
-            uint256 _tokensToGov =
+            uint256 _tokensToKeep =
                 _tokensAvailable.mul(percentKeep).div(MAX_BPS);
-            if (_tokensToGov > 0) {
-                IERC20(angleToken).transfer(treasury, _tokensToGov);
+            if (_tokensToKeep > 0) {
+                IERC20(angleToken).transfer(address(strategyProxy), _tokensToKeep);
+                _swap(_tokensAvailable.sub(_tokensToKeep), address(angleToken));
             }
-            _tokensAvailable = balanceOfAngleToken();
-            uint256 _tokensToLock =
-                _tokensAvailable.mul(percentLock).div(MAX_BPS);
-            if (_tokensToLock > 0) {
-                IERC20(angleToken).transfer(address(strategyProxy), _tokensToLock);
-            }
-            uint256 _tokensRemain = balanceOfAngleToken();
-            _swap(_tokensRemain, address(angleToken));
         }
 
         // Second, run initial profit + loss calculations.
