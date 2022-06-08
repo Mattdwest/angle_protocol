@@ -61,14 +61,24 @@ def test_migration(
     assert san_token_gauge.balanceOf(angle_voter) > 0
 
     newstrategy.setStrategist(strategist)
-    vault.migrateStrategy(strategy, newstrategy, {"from": gov})
-    strategy_proxy.approveStrategy(san_token_gauge, newstrategy.address, {"from": gov})
-    strategy_proxy.approveStrategy(angle_stable_master, newstrategy.address, {"from": gov})
 
+    san_token_balance = strategy.balanceOfStake()
+    assets = strategy.estimatedTotalAssets()
+    assert san_token_balance > 0
     assert san_token.balanceOf(strategy) == 0
     assert san_token.balanceOf(newstrategy) == 0
+    vault.migrateStrategy(strategy, newstrategy, {"from": gov})
+    assert san_token.balanceOf(strategy) == 0
+    assert san_token.balanceOf(newstrategy) == 0
+    assert san_token.balanceOf(strategy_proxy) == 0
+    assert strategy.balanceOfStake() == 0
+    assert newstrategy.balanceOfStake() == 0
+    strategy_proxy.approveStrategy(san_token_gauge, newstrategy.address, {"from": gov})
+    strategy_proxy.approveStrategy(angle_stable_master, newstrategy.address, {"from": gov})
+    assert pytest.approx(newstrategy.estimatedTotalAssets(),rel=1e-3) == assets
 
     newstrategy.harvest({"from": strategist})
     assert san_token.balanceOf(newstrategy) == 0
     assert san_token_gauge.balanceOf(newstrategy) == 0
     assert san_token_gauge.balanceOf(angle_voter) > 0
+    assert token.balanceOf(newstrategy) == 0

@@ -340,12 +340,16 @@ contract StrategyAngleUSDC is BaseStrategy {
 
     // transfers all tokens to new strategy
     function prepareMigration(address _newStrategy) internal override {
-        // want is transferred by the base contract's migrate function
-        // IAngleGauge(sanTokenGauge).claim_rewards();
-        // IAngleGauge(sanTokenGauge).withdraw(balanceOfStake());
-
-        IERC20(sanToken).safeTransfer(_newStrategy, IERC20(sanToken).balanceOf(address(this)));
-        IERC20(angleToken).transfer(_newStrategy, balanceOfAngleToken());
+        uint256 _angleBalance = balanceOfAngleToken();
+        if(_angleBalance > 0) {
+            IERC20(angleToken).safeTransfer(_newStrategy, _angleBalance);
+        }
+        uint256 _stakedBalance = balanceOfStake();
+        if (_stakedBalance > 0) {
+            strategyProxy.withdraw(sanTokenGauge, sanToken, _stakedBalance);
+            IERC20(sanToken).safeTransfer(address(strategyProxy), _stakedBalance);
+            withdrawFromStableMaster(_stakedBalance);
+        }
     }
 
     function protectedTokens()
