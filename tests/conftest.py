@@ -101,7 +101,7 @@ def strategy(
     guardian,
     keeper,
     vault,
-    StrategyAngleUSDC,
+    Strategy,
     gov,
     san_token,
     angle_token,
@@ -111,7 +111,7 @@ def strategy(
     pool_manager,
 ):
     strategy = strategist.deploy(
-        StrategyAngleUSDC,
+        Strategy,
         vault,
         san_token,
         angle_token,
@@ -188,7 +188,7 @@ def newstrategy(
     guardian,
     keeper,
     vault,
-    StrategyAngleUSDC,
+    Strategy,
     gov,
     san_token,
     angle_token,
@@ -198,7 +198,7 @@ def newstrategy(
     pool_manager,
 ):
     newstrategy = guardian.deploy(
-        StrategyAngleUSDC,
+        Strategy,
         vault,
         san_token,
         angle_token,

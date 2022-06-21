@@ -1,7 +1,7 @@
 import pytest
 
 from brownie import Wei, accounts, Contract, config, ZERO_ADDRESS
-from brownie import StrategyAngleUSDC
+from brownie import Strategy
 
 
 @pytest.mark.require_network("mainnet-fork")

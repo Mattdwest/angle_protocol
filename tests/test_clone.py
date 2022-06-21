@@ -36,7 +36,7 @@ def test_clone(
         {"from": strategist},
     )
     cloned_strategy = Contract.from_abi(
-        "StrategyAngleUSDC", clone_tx.events["Cloned"]["clone"], strategy.abi
+        "Strategy", clone_tx.events["Cloned"]["clone"], strategy.abi
     )
 
     vault.migrateStrategy(strategy.address, cloned_strategy.address, {"from": gov})
@@ -143,7 +143,7 @@ def test_clone_of_clone(
         {"from": strategist},
     )
     cloned_strategy = Contract.from_abi(
-        "StrategyAngleUSDC", clone_tx.events["Cloned"]["clone"], strategy.abi
+        "Strategy", clone_tx.events["Cloned"]["clone"], strategy.abi
     )
 
     vault.migrateStrategy(strategy.address, cloned_strategy.address, {"from": gov})
@@ -191,7 +191,7 @@ def test_double_initialize(
         {"from": strategist},
     )
     cloned_strategy = Contract.from_abi(
-        "StrategyAngleUSDC", clone_tx.events["Cloned"]["clone"], strategy.abi
+        "Strategy", clone_tx.events["Cloned"]["clone"], strategy.abi
     )
 
     # should not be able to call initialize twice

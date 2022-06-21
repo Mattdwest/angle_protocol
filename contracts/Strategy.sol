@@ -19,7 +19,7 @@ import "../interfaces/Angle/IStableMaster.sol";
 import "../interfaces/Angle/IAngleGauge.sol";
 import "../interfaces/uniswap/IUni.sol";
 
-contract StrategyAngleUSDC is BaseStrategy {
+contract Strategy is BaseStrategy {
     using SafeERC20 for IERC20;
     using Address for address;
     using SafeMath for uint256;
@@ -143,7 +143,7 @@ contract StrategyAngleUSDC is BaseStrategy {
             newStrategy := create(0, clone_code, 0x37)
         }
 
-        StrategyAngleUSDC(newStrategy).initialize(
+        Strategy(newStrategy).initialize(
             _vault,
             _strategist,
             _rewards,
