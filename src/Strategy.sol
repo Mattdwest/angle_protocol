@@ -11,10 +11,10 @@ import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {BaseStrategy} from "@yearnvaults/contracts/BaseStrategy.sol";
 import {IERC20Metadata} from "@yearnvaults/contracts/yToken.sol";
 
-import "./interfaces/curve/ICurve.sol";
+import "./interfaces/Curve/ICurve.sol";
 import "./interfaces/Angle/IStableMaster.sol";
 import "./interfaces/Angle/IAngleGauge.sol";
-import "./interfaces/uniswap/IUni.sol";
+import "./interfaces/Uniswap/IUni.sol";
 
 contract Strategy is BaseStrategy {
     using SafeERC20 for IERC20;
