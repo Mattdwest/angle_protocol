@@ -13,6 +13,7 @@ import {IERC20Metadata} from "@yearnvaults/contracts/yToken.sol";
 
 import "./interfaces/Angle/IStableMaster.sol";
 import "./interfaces/Angle/IAngleGauge.sol";
+import "./interfaces/Yearn/ITradeFactory.sol";
 
 contract Strategy is BaseStrategy {
     using SafeERC20 for IERC20;
@@ -32,6 +33,7 @@ contract Strategy is BaseStrategy {
     IAngleGauge public sanTokenGauge;
     address public treasury;
     address public poolManager;
+    address public tradeFactory = address(0);
 
     constructor(
         address _vault,
@@ -148,22 +150,7 @@ contract Strategy is BaseStrategy {
             uint256 _debtPayment
         )
     {
-        // First, claim & sell any rewards.
-
-        sanTokenGauge.claim_rewards();
-
-        uint256 _tokensAvailable = balanceOfAngleToken();
-        if (_tokensAvailable > 0) {
-            uint256 _tokensToGov =
-                (_tokensAvailable * percentKeep) / MAX_BPS;
-            if (_tokensToGov > 0) {
-                IERC20(angleToken).transfer(treasury, _tokensToGov);
-            }
-            uint256 _tokensRemain = balanceOfAngleToken();
-            _swap(_tokensRemain, address(angleToken));
-        }
-
-        // Second, run initial profit + loss calculations.
+        // Run initial profit + loss calculations.
 
         uint256 _totalAssets = estimatedTotalAssets();
         uint256 _totalDebt = vault.strategies(address(this)).totalDebt;
@@ -175,7 +162,7 @@ contract Strategy is BaseStrategy {
             _loss = _totalDebt - _totalAssets;
         }
 
-        // Third, free up _debtOutstanding + our profit, and make any necessary adjustments to the accounting.
+        // Free up _debtOutstanding + our profit, and make any necessary adjustments to the accounting.
 
         (uint256 _amountFreed, uint256 _liquidationLoss) =
             liquidatePosition(_debtOutstanding + _profit);
@@ -197,6 +184,18 @@ contract Strategy is BaseStrategy {
     function adjustPosition(uint256 _debtOutstanding) internal override {
         if (emergencyExit) {
             return;
+        }
+
+        // Claim rewards here so that we can chain tend() -> yswap sell -> harvest() in a single transaction
+        sanTokenGauge.claim_rewards();
+
+        uint256 _tokensAvailable = balanceOfAngleToken();
+        if (_tokensAvailable > 0) {
+            uint256 _tokensToGov =
+                (_tokensAvailable * percentKeep) / MAX_BPS;
+            if (_tokensToGov > 0) {
+                angleToken.transfer(treasury, _tokensToGov);
+            }
         }
 
         uint256 _balanceOfWant = balanceOfWant();
@@ -228,7 +227,6 @@ contract Strategy is BaseStrategy {
         (_amountFreed, ) = liquidatePosition(estimatedTotalAssets());
     }
 
-    //v0.4.3 includes logic for emergencyExit
     function liquidatePosition(uint256 _amountNeeded)
         internal
         override
@@ -267,23 +265,6 @@ contract Strategy is BaseStrategy {
         withdrawFromStableMaster(_amountInSanToken);
     }
 
-    // swaps rewarded tokens for want
-    // needs to use Sushi. May want to include UniV2 / V3
-    function _swap(uint256 _amountIn, address _token) internal {
-        address[] memory path = new address[](3);
-        path[0] = _token; // token to swap
-        path[1] = weth;
-        path[2] = address(want);
-
-        IUni(unirouter).swapExactTokensForTokens(
-            _amountIn,
-            0,
-            path,
-            address(this),
-            block.timestamp 
-        );
-    }
-
     // transfers all tokens to new strategy
     function prepareMigration(address _newStrategy) internal override {
         // want is transferred by the base contract's migrate function
@@ -301,21 +282,14 @@ contract Strategy is BaseStrategy {
         returns (address[] memory)
     {}
 
-    // below for 0.4.3 upgrade
+
     function ethToWant(uint256 _amtInWei)
         public
         view
         override
         returns (uint256)
     {
-        address[] memory path = new address[](2);
-        path[0] = weth;
-        path[1] = address(want);
-
-        uint256[] memory amounts =
-            IUni(unirouter).getAmountsOut(_amtInWei, path);
-
-        return amounts[amounts.length - 1];
+        return _amtInWei;
     }
 
     // ---------------------- SETTERS -----------------------
@@ -395,5 +369,26 @@ contract Strategy is BaseStrategy {
             address(this),
             poolManager
         );
+    }
+
+    // ---------------------- YSWAPS FUNCTIONS ----------------------
+
+    function setTradeFactory(address _tradeFactory) external onlyGovernance {
+        if (tradeFactory != address(0)) {
+            _removeTradeFactoryPermissions();
+        }
+        angleToken.safeApprove(_tradeFactory, type(uint256).max);
+        ITradeFactory tf = ITradeFactory(_tradeFactory);
+        tf.enable(address(angleToken), address(want));
+        tradeFactory = _tradeFactory;
+    }
+
+    function removeTradeFactoryPermissions() external onlyEmergencyAuthorized {
+        _removeTradeFactoryPermissions();
+    }
+
+    function _removeTradeFactoryPermissions() internal {
+        angleToken.safeApprove(tradeFactory, 0);
+        tradeFactory = address(0);
     }
 }
