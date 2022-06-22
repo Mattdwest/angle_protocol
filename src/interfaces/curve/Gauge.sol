@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.6.12;
+pragma solidity ^0.8.12;
 
 interface Gauge {
     function deposit(uint256) external;

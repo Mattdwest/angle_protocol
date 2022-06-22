@@ -1,29 +1,24 @@
 // SPDX-License-Identifier: MIT
 
 pragma experimental ABIEncoderV2;
-pragma solidity 0.6.12;
+pragma solidity ^0.8.12;
 
-import "@openzeppelin/contracts/math/Math.sol";
-import {
-    SafeERC20,
-    SafeMath,
-    IERC20,
-    Address
-} from "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
 import {BaseStrategy} from "@yearnvaults/contracts/BaseStrategy.sol";
 import {IERC20Metadata} from "@yearnvaults/contracts/yToken.sol";
 
-import "../interfaces/curve/ICurve.sol";
-import "../interfaces/Angle/IStableMaster.sol";
-import "../interfaces/Angle/IAngleGauge.sol";
-import "../interfaces/uniswap/IUni.sol";
+import "./interfaces/curve/ICurve.sol";
+import "./interfaces/Angle/IStableMaster.sol";
+import "./interfaces/Angle/IAngleGauge.sol";
+import "./interfaces/uniswap/IUni.sol";
 
 contract Strategy is BaseStrategy {
     using SafeERC20 for IERC20;
     using Address for address;
-    using SafeMath for uint256;
-    using SafeMath for uint128;
 
     event Cloned(address indexed clone);
 
@@ -35,7 +30,7 @@ contract Strategy is BaseStrategy {
         address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
     uint256 public percentKeep;
     address public sanToken;
-    address public angleToken;
+    address public constant angleToken = 0x31429d1856aD1377A8A0079410B297e1a9e214c2;
     address public unirouter;
     address public angleStableMaster;
     address public sanTokenGauge;
@@ -45,7 +40,6 @@ contract Strategy is BaseStrategy {
     constructor(
         address _vault,
         address _sanToken,
-        address _angleToken,
         address _unirouter,
         address _angleStableMaster,
         address _sanTokenGauge,
@@ -54,7 +48,6 @@ contract Strategy is BaseStrategy {
         // Constructor should initialize local variables
         _initializeStrategy(
             _sanToken,
-            _angleToken,
             _unirouter,
             _angleStableMaster,
             _sanTokenGauge,
@@ -66,14 +59,12 @@ contract Strategy is BaseStrategy {
 
     function _initializeStrategy(
         address _sanToken,
-        address _angleToken,
         address _unirouter,
         address _angleStableMaster,
         address _sanTokenGauge,
         address _poolManager
     ) internal {
         sanToken = _sanToken;
-        angleToken = _angleToken;
         unirouter = _unirouter;
         angleStableMaster = _angleStableMaster;
         sanTokenGauge = _sanTokenGauge;
@@ -83,11 +74,11 @@ contract Strategy is BaseStrategy {
         treasury = address(0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde);
         healthCheck = 0xDDCea799fF1699e98EDF118e0629A974Df7DF012;
 
-        IERC20(want).safeApprove(angleStableMaster, uint256(-1));
-        IERC20(sanToken).safeApprove(sanTokenGauge, uint256(-1));
-        // IERC20(want).safeApprove(sanToken, uint256(-1));
-        // IERC20(sanToken).safeApprove(angleStableMaster, uint256(-1));
-        IERC20(angleToken).approve(unirouter, uint256(-1));
+        IERC20(want).safeApprove(angleStableMaster, type(uint256).max);
+        IERC20(sanToken).safeApprove(sanTokenGauge, type(uint256).max);
+        // IERC20(want).safeApprove(sanToken, type(uint256).max);
+        // IERC20(sanToken).safeApprove(angleStableMaster, type(uint256).max);
+        IERC20(angleToken).approve(unirouter, type(uint256).max);
     }
 
     function initialize(
@@ -96,7 +87,6 @@ contract Strategy is BaseStrategy {
         address _rewards,
         address _keeper,
         address _sanToken,
-        address _angleToken,
         address _unirouter,
         address _angleStableMaster,
         address _sanTokenGauge,
@@ -105,7 +95,6 @@ contract Strategy is BaseStrategy {
         _initialize(_vault, _strategist, _rewards, _keeper);
         _initializeStrategy(
             _sanToken,
-            _angleToken,
             _unirouter,
             _angleStableMaster,
             _sanTokenGauge,
@@ -119,7 +108,6 @@ contract Strategy is BaseStrategy {
         address _rewards,
         address _keeper,
         address _sanToken,
-        address _angleToken,
         address _unirouter,
         address _angleStableMaster,
         address _sanTokenGauge,
@@ -149,7 +137,6 @@ contract Strategy is BaseStrategy {
             _rewards,
             _keeper,
             _sanToken,
-            _angleToken,
             _unirouter,
             _angleStableMaster,
             _sanTokenGauge,
@@ -171,7 +158,7 @@ contract Strategy is BaseStrategy {
 
     // returns sum of all assets, realized and unrealized
     function estimatedTotalAssets() public view override returns (uint256) {
-        return balanceOfWant().add(valueOfStake()).add(valueOfSanToken());
+        return balanceOfWant() + valueOfStake() + valueOfSanToken();
     }
 
     function prepareReturn(uint256 _debtOutstanding)
@@ -190,7 +177,7 @@ contract Strategy is BaseStrategy {
         uint256 _tokensAvailable = balanceOfAngleToken();
         if (_tokensAvailable > 0) {
             uint256 _tokensToGov =
-                _tokensAvailable.mul(percentKeep).div(MAX_BPS);
+                (_tokensAvailable * percentKeep) / MAX_BPS;
             if (_tokensToGov > 0) {
                 IERC20(angleToken).transfer(treasury, _tokensToGov);
             }
@@ -205,25 +192,25 @@ contract Strategy is BaseStrategy {
 
         if (_totalAssets >= _totalDebt) {
             // Implicitly, _profit & _loss are 0 before we change them.
-            _profit = _totalAssets.sub(_totalDebt);
+            _profit = _totalAssets - _totalDebt;
         } else {
-            _loss = _totalDebt.sub(_totalAssets);
+            _loss = _totalDebt - _totalAssets;
         }
 
         // Third, free up _debtOutstanding + our profit, and make any necessary adjustments to the accounting.
 
         (uint256 _amountFreed, uint256 _liquidationLoss) =
-            liquidatePosition(_debtOutstanding.add(_profit));
+            liquidatePosition(_debtOutstanding + _profit);
 
-        _loss = _loss.add(_liquidationLoss);
+        _loss = _loss + _liquidationLoss;
 
         _debtPayment = Math.min(_debtOutstanding, _amountFreed);
 
         if (_loss > _profit) {
-            _loss = _loss.sub(_profit);
+            _loss = _loss - _profit;
             _profit = 0;
         } else {
-            _profit = _profit.sub(_loss);
+            _profit = _profit - _loss;
             _loss = 0;
         }
     }
@@ -242,7 +229,7 @@ contract Strategy is BaseStrategy {
         }
 
         // Invest the rest of the want
-        uint256 _wantAvailable = _balanceOfWant.sub(_debtOutstanding);
+        uint256 _wantAvailable = _balanceOfWant - _debtOutstanding;
         if (_wantAvailable > 0) {
             // deposit for sanToken
             depositToStableMaster(_wantAvailable);
@@ -275,7 +262,7 @@ contract Strategy is BaseStrategy {
         uint256 _balanceOfWant = balanceOfWant();
         if (_balanceOfWant < _amountNeeded) {
             // We need to withdraw to get back more want
-            _withdrawSome(_amountNeeded.sub(_balanceOfWant));
+            _withdrawSome(_amountNeeded - _balanceOfWant);
             // reload balance of want after side effect
             _balanceOfWant = balanceOfWant();
         }
@@ -284,7 +271,7 @@ contract Strategy is BaseStrategy {
             _liquidatedAmount = _amountNeeded;
         } else {
             _liquidatedAmount = _balanceOfWant;
-            _loss = _amountNeeded.sub(_balanceOfWant);
+            _loss = _amountNeeded - _balanceOfWant;
         }
     }
 
@@ -295,7 +282,7 @@ contract Strategy is BaseStrategy {
         uint256 _sanTokenBalance = balanceOfSanToken();
         if (_amountInSanToken > _sanTokenBalance) {
             IAngleGauge(sanTokenGauge).withdraw(
-                _amountInSanToken.sub(_sanTokenBalance)
+                _amountInSanToken - _sanTokenBalance
             );
         }
 
@@ -315,7 +302,7 @@ contract Strategy is BaseStrategy {
             0,
             path,
             address(this),
-            now
+            block.timestamp 
         );
     }
 
@@ -400,11 +387,11 @@ contract Strategy is BaseStrategy {
         view
         returns (uint256)
     {
-        return _sanTokenAmount.mul(getSanRate()).div(1e18);
+        return (_sanTokenAmount * getSanRate()) / 1e18;
     }
 
     function wantToSanToken(uint256 _wantAmount) public view returns (uint256) {
-        return _wantAmount.mul(1e18).div(getSanRate()).add(1);
+        return ((_wantAmount * 1e18) / getSanRate()) + 1;
     }
 
     // Get rate of conversion between sanTokens and want
