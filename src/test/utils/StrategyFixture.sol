@@ -8,6 +8,7 @@ import {ExtendedTest} from "./ExtendedTest.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {IVault} from "../../interfaces/Yearn/Vault.sol";
 import "../../interfaces/Angle/IStableMaster.sol";
+import "../../interfaces/Yearn/ITradeFactory.sol";
 
 // NOTE: if the name of the strat or file changes this needs to be updated
 import {Strategy} from "../../Strategy.sol";
@@ -44,6 +45,13 @@ contract StrategyFixture is ExtendedTest {
     address public management = address(5);
     address public strategist = address(6);
     address public keeper = address(7);
+    address public yMech = 0x2C01B4AD51a67E2d8F02208F54dF9aC4c0B778B6;
+    address public angleTokenWhale = 0xe02F8E39b8cFA7d3b62307E46077669010883459;
+    address public constant sushiswapSwapper = 0x408Ec47533aEF482DC8fA568c36EC0De00593f44;
+    address public constant angleFeeManager = 0x97B6897AAd7aBa3861c04C0e6388Fc02AF1F227f;
+
+    ITradeFactory public constant tradeFactory = ITradeFactory(0x7BAF843e06095f68F4990Ca50161C2C4E4e01ec6);
+    IERC20 public constant angleToken = IERC20(0x31429d1856aD1377A8A0079410B297e1a9e214c2);
 
     IStableMaster public constant stableMaster = IStableMaster(0x5adDc89785D75C86aB939E9e15bfBBb7Fc086A87);
 
@@ -83,8 +91,8 @@ contract StrategyFixture is ExtendedTest {
 
             assetFixtures.push(AssetFixture(IVault(_vault), Strategy(_strategy), _want));
 
-            vm.label(address(_vault), string(abi.encode(_tokenToTest, "Vault")));
-            vm.label(address(_strategy), string(abi.encode(_tokenToTest, "Strategy")));
+            vm.label(address(_vault), string(abi.encodePacked(_tokenToTest, "Vault")));
+            vm.label(address(_strategy), string(abi.encodePacked(_tokenToTest, "Strategy")));
             vm.label(address(_want), _tokenToTest);
         }
 
@@ -138,11 +146,19 @@ contract StrategyFixture is ExtendedTest {
         Strategy _strategy = new Strategy(
             _vault, 
             sanTokenAddrs[_tokenSymbol], 
-            0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F, 
-            0x5adDc89785D75C86aB939E9e15bfBBb7Fc086A87, 
             gaugeAddrs[_tokenSymbol],
             poolManagerAddrs[_tokenSymbol]
         );
+
+        vm.startPrank(yMech);
+        tradeFactory.grantRole(
+            tradeFactory.STRATEGY(),
+            address(_strategy)
+        );
+        vm.stopPrank();
+
+        vm.prank(gov);
+        _strategy.setTradeFactory(address(tradeFactory));
 
         return address(_strategy);
     }
@@ -229,4 +245,21 @@ contract StrategyFixture is ExtendedTest {
         tokenPrices["USDC"] = 1;
         tokenPrices["DAI"] = 1;
     }
+
+    // Testing utilities
+
+    function _mockSLPProfits(Strategy strategy) internal {
+        address _poolManager = strategy.poolManager();
+        (,,,,,,,SLPData memory _slpData,) = stableMaster.collateralMap(_poolManager);
+        uint256 _maxProfitPerBlock = _slpData.maxInterestsDistributed;
+
+        for (uint8 i = 0; i < 50; ++i) {
+            vm.prank(_poolManager);
+            stableMaster.accumulateInterest(_maxProfitPerBlock);
+            skip(1);
+            vm.roll(block.number + 1);
+        }
+    }
+
+    
 }

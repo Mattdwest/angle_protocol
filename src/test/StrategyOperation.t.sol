@@ -8,6 +8,7 @@ import {Strategy} from "../Strategy.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@yearnvaults/contracts/yToken.sol";
 import "../interfaces/Angle/IStableMaster.sol";
+import "../interfaces/Yearn/ITradeFactory.sol";
 
 contract StrategyOperationsTest is StrategyFixture {
     // setup is run on before each test
@@ -17,14 +18,15 @@ contract StrategyOperationsTest is StrategyFixture {
     }
 
     /// Test Operations
-    function testStrategyOperation(uint256 _amount) public {
-        vm.assume(_amount > minFuzzAmt && _amount < maxFuzzAmt);
+    function testStrategyOperation(uint256 _fuzzAmount) public {
+        vm.assume(_fuzzAmount > minFuzzAmt && _fuzzAmount < maxFuzzAmt);
         for(uint8 i = 0; i < assetFixtures.length; ++i) {
             AssetFixture memory _assetFixture = assetFixtures[i];
             IVault vault = _assetFixture.vault;
             Strategy strategy = _assetFixture.strategy;
             IERC20 want = _assetFixture.want;
 
+            uint256 _amount = _fuzzAmount;
             uint8 _wantDecimals = IERC20Metadata(address(want)).decimals();
             if (_wantDecimals != 18) {
                 uint256 _decimalDifference = 18 - _wantDecimals;
@@ -57,21 +59,22 @@ contract StrategyOperationsTest is StrategyFixture {
         }
     }
 
-    function testEmergencyExit(uint256 _amount) public {
-        vm.assume(_amount > minFuzzAmt && _amount < maxFuzzAmt);
+    function testEmergencyExit(uint256 _fuzzAmount) public {
+        vm.assume(_fuzzAmount > minFuzzAmt && _fuzzAmount < maxFuzzAmt);
         for(uint8 i = 0; i < assetFixtures.length; ++i) {
             AssetFixture memory _assetFixture = assetFixtures[i];
             IVault vault = _assetFixture.vault;
             Strategy strategy = _assetFixture.strategy;
             IERC20 want = _assetFixture.want;
 
+            uint256 _amount = _fuzzAmount;
             uint8 _wantDecimals = IERC20Metadata(address(want)).decimals();
             if (_wantDecimals != 18) {
+                console.log("Less than 18 decimals");
                 uint256 _decimalDifference = 18 - _wantDecimals;
 
                 _amount = _amount / (10 ** _decimalDifference);
             }
-
             deal(address(want), user, _amount);
 
             // Deposit to the vault
@@ -94,14 +97,17 @@ contract StrategyOperationsTest is StrategyFixture {
         }
     }
 
-    function testProfitableHarvest(uint256 _amount) public {
-        vm.assume(_amount > minFuzzAmt && _amount < maxFuzzAmt);
+    // There are two types of profit: (1) san token appreciation, kind of like cToken appreciation and (2) angle rewards
+    // This test simulates only the first, the following test simulates only the latter, and the third simulates both
+    function testProfitableHarvest_SanTokenProfit(uint256 _fuzzAmount) public {
+        vm.assume(_fuzzAmount > minFuzzAmt && _fuzzAmount < maxFuzzAmt);
         for(uint8 i = 0; i < assetFixtures.length; ++i) {
             AssetFixture memory _assetFixture = assetFixtures[i];
             IVault vault = _assetFixture.vault;
             Strategy strategy = _assetFixture.strategy;
             IERC20 want = _assetFixture.want;
 
+            uint256 _amount = _fuzzAmount;
             uint8 _wantDecimals = IERC20Metadata(address(want)).decimals();
             if (_wantDecimals != 18) {
                 uint256 _decimalDifference = 18 - _wantDecimals;
@@ -117,34 +123,14 @@ contract StrategyOperationsTest is StrategyFixture {
             vault.deposit(_amount);
             assertRelApproxEq(want.balanceOf(address(vault)), _amount, DELTA);
 
-            uint256 beforePps = vault.pricePerShare();
+            uint256 _beforePps = vault.pricePerShare();
 
-            // Harvest 1: Send funds through the strategy
             skip(1);
             vm.prank(strategist);
             strategy.harvest();
             assertRelApproxEq(strategy.estimatedTotalAssets(), _amount, DELTA);
 
-            // TODO: Add some code before harvest #2 to simulate earning yield
-
-            address _poolManager = strategy.poolManager();
-            (,,,,,,,SLPData memory _slpData,) = stableMaster.collateralMap(_poolManager);
-            uint256 _maxProfitPerBlock = _slpData.maxInterestsDistributed;
-
-            uint256 _assetsAtT = strategy.estimatedTotalAssets();
-            console.log("Assets at T", _assetsAtT);
-
-            for (uint8 i = 0; i < 50; ++i) {
-                vm.prank(_poolManager);
-                stableMaster.accumulateInterest(_maxProfitPerBlock);
-                skip(1);
-                vm.roll(block.number + 1);
-            }
-
-            uint256 _assetsAtTPlusOne = strategy.estimatedTotalAssets();
-            console.log("Assets at T+1", _assetsAtTPlusOne);
-
-            skip(7 days);
+            _mockSLPProfits(strategy);
 
             // Harvest 2: Realize profit
             skip(1);
@@ -152,23 +138,220 @@ contract StrategyOperationsTest is StrategyFixture {
             strategy.harvest();
             skip(6 hours);
 
-            // TODO: Uncomment the lines below
-            // uint256 profit = want.balanceOf(address(vault));
-            // assertGt(want.balanceOf(address(strategy)) + profit, _amount);
-            // assertGt(vault.pricePerShare(), beforePps)
+            uint256 _profit = want.balanceOf(address(vault));
+            assertGt(strategy.estimatedTotalAssets() + _profit, _amount);
+            assertGt(vault.pricePerShare(), _beforePps);
         }
     }
 
-    function testChangeDebt(uint256 _amount) public {
-        vm.assume(_amount > minFuzzAmt && _amount < maxFuzzAmt);
+    function testProfitableHarvest_AngleFarmingProfit(uint256 _fuzzAmount) public {
+        vm.assume(_fuzzAmount > minFuzzAmt && _fuzzAmount < maxFuzzAmt);
         for(uint8 i = 0; i < assetFixtures.length; ++i) {
             AssetFixture memory _assetFixture = assetFixtures[i];
             IVault vault = _assetFixture.vault;
             Strategy strategy = _assetFixture.strategy;
             IERC20 want = _assetFixture.want;
 
+            uint256 _amount = _fuzzAmount;
             uint8 _wantDecimals = IERC20Metadata(address(want)).decimals();
             if (_wantDecimals != 18) {
+                console.log("Less than 18 decimals");
+                uint256 _decimalDifference = 18 - _wantDecimals;
+
+                _amount = _amount / (10 ** _decimalDifference);
+            }
+            deal(address(want), user, _amount);
+
+            // Deposit to the vault
+            vm.prank(user);
+            want.approve(address(vault), _amount);
+            vm.prank(user);
+            vault.deposit(_amount);
+            assertRelApproxEq(want.balanceOf(address(vault)), _amount, DELTA);
+
+            uint256 _beforePps = vault.pricePerShare();
+
+            skip(1);
+            vm.prank(strategist);
+            strategy.harvest();
+            assertRelApproxEq(strategy.estimatedTotalAssets(), _amount, DELTA);
+
+            _mockSLPProfits(strategy);
+
+            // Airdrop 1 angle for every $1000
+            deal(address(angleToken), address(strategy), _fuzzAmount / 1000);
+
+            vm.prank(strategist);
+            strategy.tend();
+            uint256 _angleTokenBalance = strategy.balanceOfAngleToken();
+            assertGt(_angleTokenBalance, 0);
+
+            address _tokenIn = address(strategy.angleToken());
+            address _tokenOut = address(want);
+
+            AsyncTradeExecutionDetails memory _tradeExecutionDetails = AsyncTradeExecutionDetails(
+                address(strategy),
+                _tokenIn,
+                _tokenOut, 
+                _angleTokenBalance, // amount in
+                1 // min out
+            );
+            
+            address[] memory path = new address[](3);
+            path[0] = _tokenIn; // token to swap
+            path[1] = address(weth);
+            path[2] = _tokenOut;
+
+            vm.prank(yMech);
+            tradeFactory.execute(_tradeExecutionDetails, sushiswapSwapper, abi.encode(path));
+
+            // Harvest 2: Realize profit
+            skip(1);
+            vm.prank(strategist);
+            strategy.harvest();
+            skip(6 hours);
+
+            uint256 _profit = want.balanceOf(address(vault));
+            assertGt(strategy.estimatedTotalAssets() + _profit, _amount);
+            assertGt(vault.pricePerShare(), _beforePps);
+        }
+    }
+
+    function testProfitableHarvest_AngleTokenAndSanTokenProfit(uint256 _fuzzAmount) public {
+        vm.assume(_fuzzAmount > minFuzzAmt && _fuzzAmount < maxFuzzAmt);
+        for(uint8 i = 0; i < assetFixtures.length; ++i) {
+            AssetFixture memory _assetFixture = assetFixtures[i];
+            IVault vault = _assetFixture.vault;
+            Strategy strategy = _assetFixture.strategy;
+            IERC20 want = _assetFixture.want;
+
+            uint256 _amount = _fuzzAmount;
+            uint8 _wantDecimals = IERC20Metadata(address(want)).decimals();
+            if (_wantDecimals != 18) {
+                console.log("Less than 18 decimals");
+                uint256 _decimalDifference = 18 - _wantDecimals;
+
+                _amount = _amount / (10 ** _decimalDifference);
+            }
+            deal(address(want), user, _amount);
+
+            // Deposit to the vault
+            vm.prank(user);
+            want.approve(address(vault), _amount);
+            vm.prank(user);
+            vault.deposit(_amount);
+            assertRelApproxEq(want.balanceOf(address(vault)), _amount, DELTA);
+
+            uint256 _beforePps = vault.pricePerShare();
+
+            skip(1);
+            vm.prank(strategist);
+            strategy.harvest();
+            assertRelApproxEq(strategy.estimatedTotalAssets(), _amount, DELTA);
+
+            // Airdrop 1 angle for every $1000
+            deal(address(angleToken), address(strategy), _fuzzAmount / 1000);
+
+            vm.prank(strategist);
+            strategy.tend();
+            uint256 _angleTokenBalance = strategy.balanceOfAngleToken();
+            assertGt(_angleTokenBalance, 0);
+
+            address _tokenIn = address(strategy.angleToken());
+            address _tokenOut = address(want);
+
+            AsyncTradeExecutionDetails memory _tradeExecutionDetails = AsyncTradeExecutionDetails(
+                address(strategy),
+                _tokenIn,
+                _tokenOut, 
+                _angleTokenBalance, // amount in
+                1 // min out
+            );
+            
+            address[] memory path = new address[](3);
+            path[0] = _tokenIn; // token to swap
+            path[1] = address(weth);
+            path[2] = _tokenOut;
+
+            vm.prank(yMech);
+            tradeFactory.execute(_tradeExecutionDetails, sushiswapSwapper, abi.encode(path));
+
+            // Harvest 2: Realize profit
+            skip(1);
+            vm.prank(strategist);
+            strategy.harvest();
+            skip(6 hours);
+
+            uint256 _profit = want.balanceOf(address(vault));
+            assertGt(strategy.estimatedTotalAssets() + _profit, _amount);
+            assertGt(vault.pricePerShare(), _beforePps);
+        }
+    }
+
+    function testLossyHarvest(uint256 _fuzzAmount) public {
+        vm.assume(_fuzzAmount > minFuzzAmt && _fuzzAmount < maxFuzzAmt);
+        for(uint8 i = 0; i < assetFixtures.length; ++i) {
+            AssetFixture memory _assetFixture = assetFixtures[i];
+            IVault vault = _assetFixture.vault;
+            Strategy strategy = _assetFixture.strategy;
+            IERC20 want = _assetFixture.want;
+
+            uint256 _amount = _fuzzAmount;
+            uint8 _wantDecimals = IERC20Metadata(address(want)).decimals();
+            if (_wantDecimals != 18) {
+                uint256 _decimalDifference = 18 - _wantDecimals;
+
+                _amount = _amount / (10 ** _decimalDifference);
+            }
+            deal(address(want), user, _amount);
+
+            // Deposit to the vault
+            vm.prank(user);
+            want.approve(address(vault), _amount);
+            vm.prank(user);
+            vault.deposit(_amount);
+            assertRelApproxEq(want.balanceOf(address(vault)), _amount, DELTA);
+
+            uint256 _beforePps = vault.pricePerShare();
+
+            skip(1);
+            vm.prank(strategist);
+            strategy.harvest();
+            assertRelApproxEq(strategy.estimatedTotalAssets(), _amount, DELTA);
+
+            // As a technique to simulate losses, we increase slippage
+            uint64 _baseParams = 1000000000;
+            vm.prank(angleFeeManager);
+            stableMaster.setFeeKeeper(_baseParams, _baseParams, _baseParams / 1000, 0); // Set slippage to 0.01%
+
+            vm.startPrank(gov);
+            strategy.setEmergencyExit();
+            strategy.setDoHealthCheck(false);
+            vm.stopPrank();
+
+            // Harvest 2: Realize loss
+            skip(1);
+            vm.prank(strategist);
+            strategy.harvest();
+            skip(6 hours);
+
+            assertLt(strategy.estimatedTotalAssets(), _amount);
+            assertLt(vault.pricePerShare(), _beforePps);
+        }
+    }
+
+    function testChangeDebt(uint256 _fuzzAmount) public {
+        vm.assume(_fuzzAmount > minFuzzAmt && _fuzzAmount < maxFuzzAmt);
+        for(uint8 i = 0; i < assetFixtures.length; ++i) {
+            AssetFixture memory _assetFixture = assetFixtures[i];
+            IVault vault = _assetFixture.vault;
+            Strategy strategy = _assetFixture.strategy;
+            IERC20 want = _assetFixture.want;
+
+            uint256 _amount = _fuzzAmount;
+            uint8 _wantDecimals = IERC20Metadata(address(want)).decimals();
+            if (_wantDecimals != 18) {
+                console.log("Less than 18 decimals");
                 uint256 _decimalDifference = 18 - _wantDecimals;
 
                 _amount = _amount / (10 ** _decimalDifference);
@@ -195,25 +378,31 @@ contract StrategyOperationsTest is StrategyFixture {
             strategy.harvest();
             assertRelApproxEq(strategy.estimatedTotalAssets(), _amount, DELTA);
 
-            // In order to pass these tests, you will need to implement prepareReturn.
-            // TODO: uncomment the following lines.
-            // vm.prank(gov);
-            // vault.updateStrategyDebtRatio(address(strategy), 5_000);
-            // skip(1);
-            // vm.prank(strategist);
-            // strategy.harvest();
-            // assertRelApproxEq(strategy.estimatedTotalAssets(), half, DELTA);
+            vm.prank(gov);
+            vault.updateStrategyDebtRatio(address(strategy), 5_000);
+            skip(1);
+            vm.prank(strategist);
+            strategy.harvest();
+            assertRelApproxEq(strategy.estimatedTotalAssets(), half, DELTA);
         }
     }
 
-    function testSweep(uint256 _amount) public {
-        vm.assume(_amount > minFuzzAmt && _amount < maxFuzzAmt);
+    function testSweep(uint256 _fuzzAmount) public {
+        vm.assume(_fuzzAmount > minFuzzAmt && _fuzzAmount < maxFuzzAmt);
         for(uint8 i = 0; i < assetFixtures.length; ++i) {
             AssetFixture memory _assetFixture = assetFixtures[i];
             IVault vault = _assetFixture.vault;
             Strategy strategy = _assetFixture.strategy;
             IERC20 want = _assetFixture.want;
 
+            uint256 _amount = _fuzzAmount;
+            uint8 _wantDecimals = IERC20Metadata(address(want)).decimals();
+            if (_wantDecimals != 18) {
+                console.log("Less than 18 decimals");
+                uint256 _decimalDifference = 18 - _wantDecimals;
+
+                _amount = _amount / (10 ** _decimalDifference);
+            }
             deal(address(want), user, _amount);
 
             // Strategy want token doesn't work
@@ -254,13 +443,22 @@ contract StrategyOperationsTest is StrategyFixture {
         }
     }
 
-    function testTriggers(uint256 _amount) public {
-        vm.assume(_amount > minFuzzAmt && _amount < maxFuzzAmt);
+    function testTriggers(uint256 _fuzzAmount) public {
+        vm.assume(_fuzzAmount > minFuzzAmt && _fuzzAmount < maxFuzzAmt);
         for(uint8 i = 0; i < assetFixtures.length; ++i) {
             AssetFixture memory _assetFixture = assetFixtures[i];
             IVault vault = _assetFixture.vault;
             Strategy strategy = _assetFixture.strategy;
             IERC20 want = _assetFixture.want;
+
+            uint256 _amount = _fuzzAmount;
+            uint8 _wantDecimals = IERC20Metadata(address(want)).decimals();
+            if (_wantDecimals != 18) {
+                console.log("Less than 18 decimals");
+                uint256 _decimalDifference = 18 - _wantDecimals;
+
+                _amount = _amount / (10 ** _decimalDifference);
+            }
             deal(address(want), user, _amount);
 
             // Deposit to the vault and harvest

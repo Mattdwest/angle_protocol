@@ -7,6 +7,6 @@ remappings = [
     '@yearnvaults/=lib/yearn-vaults/',
     '@openzeppelin/=lib/openzeppelin-contracts/'
 ]
-fuzz_runs = 256
+fuzz_runs = 10 
 
 # See more config options https://github.com/gakonst/foundry/tree/master/config
