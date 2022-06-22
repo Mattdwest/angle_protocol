@@ -181,10 +181,14 @@ contract StrategyOperationsTest is StrategyFixture {
             // Airdrop 1 angle for every $1000
             deal(address(angleToken), address(strategy), _fuzzAmount / 1000);
 
+            uint256 _treasuryVaultAngleBalanceBefore = angleToken.balanceOf(yearnTreasuryVault);
             vm.prank(strategist);
             strategy.tend();
             uint256 _angleTokenBalance = strategy.balanceOfAngleToken();
             assertGt(_angleTokenBalance, 0);
+            uint256 _treasuryVaultAngleBalanceAfter = angleToken.balanceOf(yearnTreasuryVault);
+            assertGt(_treasuryVaultAngleBalanceAfter, _treasuryVaultAngleBalanceBefore);
+            assertRelApproxEq(_treasuryVaultAngleBalanceAfter - _treasuryVaultAngleBalanceBefore, _angleTokenBalance / 9, DELTA);
 
             address _tokenIn = address(strategy.angleToken());
             address _tokenOut = address(want);
@@ -330,7 +334,7 @@ contract StrategyOperationsTest is StrategyFixture {
             vm.stopPrank();
 
             // Harvest 2: Realize loss
-            skip(1);
+            skip(3 hours);
             vm.prank(strategist);
             strategy.harvest();
             skip(6 hours);

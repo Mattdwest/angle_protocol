@@ -49,6 +49,7 @@ contract StrategyFixture is ExtendedTest {
     address public angleTokenWhale = 0xe02F8E39b8cFA7d3b62307E46077669010883459;
     address public constant sushiswapSwapper = 0x408Ec47533aEF482DC8fA568c36EC0De00593f44;
     address public constant angleFeeManager = 0x97B6897AAd7aBa3861c04C0e6388Fc02AF1F227f;
+    address public constant yearnTreasuryVault = 0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde;
 
     ITradeFactory public constant tradeFactory = ITradeFactory(0x7BAF843e06095f68F4990Ca50161C2C4E4e01ec6);
     IERC20 public constant angleToken = IERC20(0x31429d1856aD1377A8A0079410B297e1a9e214c2);
