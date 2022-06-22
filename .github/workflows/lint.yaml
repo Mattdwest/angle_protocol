@@ -4,6 +4,7 @@ on:
   push:
     branches:
     - master
+    - feat/migrate-yswaps
   pull_request:
 
 jobs:
