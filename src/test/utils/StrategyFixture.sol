@@ -7,6 +7,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {ExtendedTest} from "./ExtendedTest.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {IVault} from "../../interfaces/Yearn/Vault.sol";
+import "../../interfaces/Angle/IStableMaster.sol";
 
 // NOTE: if the name of the strat or file changes this needs to be updated
 import {Strategy} from "../../Strategy.sol";
@@ -44,11 +45,13 @@ contract StrategyFixture is ExtendedTest {
     address public strategist = address(6);
     address public keeper = address(7);
 
-    uint256 public minFuzzAmt = 0.1 ether; // 10 cents
+    IStableMaster public constant stableMaster = IStableMaster(0x5adDc89785D75C86aB939E9e15bfBBb7Fc086A87);
+
+    uint256 public minFuzzAmt = 1 ether; // 10 cents
     // @dev maximum amount of want tokens deposited based on @maxDollarNotional
     uint256 public maxFuzzAmt = 25_000_000 ether; // $25M
     // Used for integer approximation
-    uint256 public constant DELTA = 10**5;
+    uint256 public constant DELTA = 10**4;
 
     function setUp() public virtual {
         _setTokenPrices();
@@ -130,13 +133,16 @@ contract StrategyFixture is ExtendedTest {
     // Deploys a strategy
     function deployStrategy(
         address _vault,
-        address _sanToken,
-        address _uniRouter,
-        address _angleStableMaster,
-        address _sanTokenGauge,
-        address _poolManager
+        string memory _tokenSymbol
     ) public returns (address) {
-        Strategy _strategy = new Strategy(_vault, _sanToken, _uniRouter, _angleStableMaster, _sanTokenGauge, _poolManager);
+        Strategy _strategy = new Strategy(
+            _vault, 
+            sanTokenAddrs[_tokenSymbol], 
+            0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F, 
+            0x5adDc89785D75C86aB939E9e15bfBBb7Fc086A87, 
+            gaugeAddrs[_tokenSymbol],
+            poolManagerAddrs[_tokenSymbol]
+        );
 
         return address(_strategy);
     }
@@ -168,11 +174,7 @@ contract StrategyFixture is ExtendedTest {
         vm.prank(_strategist);
         _strategyAddr = deployStrategy(
             _vaultAddr,
-            sanTokenAddrs[_tokenSymbol],
-            0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F, // Sushi
-            0x5adDc89785D75C86aB939E9e15bfBBb7Fc086A87, // Stablemaster
-            gaugeAddrs[_tokenSymbol],
-            poolManagerAddrs[_tokenSymbol]
+            _tokenSymbol
         );
         Strategy _strategy = Strategy(_strategyAddr);
 
