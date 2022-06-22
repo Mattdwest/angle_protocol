@@ -11,10 +11,8 @@ import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {BaseStrategy} from "@yearnvaults/contracts/BaseStrategy.sol";
 import {IERC20Metadata} from "@yearnvaults/contracts/yToken.sol";
 
-import "./interfaces/Curve/ICurve.sol";
 import "./interfaces/Angle/IStableMaster.sol";
 import "./interfaces/Angle/IAngleGauge.sol";
-import "./interfaces/Uniswap/IUni.sol";
 
 contract Strategy is BaseStrategy {
     using SafeERC20 for IERC20;
@@ -24,32 +22,26 @@ contract Strategy is BaseStrategy {
 
     bool public isOriginal = true;
 
-    // variables for determining how much governance token to hold for voting rights
+    IERC20 public constant angleToken = IERC20(0x31429d1856aD1377A8A0079410B297e1a9e214c2);
+    IStableMaster public constant angleStableMaster = IStableMaster(0x5adDc89785D75C86aB939E9e15bfBBb7Fc086A87);
     uint256 public constant MAX_BPS = 10000;
-    address public constant weth =
-        address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+
+    // variable for determining how much governance token to hold for voting rights
     uint256 public percentKeep;
-    address public sanToken;
-    address public constant angleToken = 0x31429d1856aD1377A8A0079410B297e1a9e214c2;
-    address public unirouter;
-    address public angleStableMaster;
-    address public sanTokenGauge;
+    IERC20 public sanToken;
+    IAngleGauge public sanTokenGauge;
     address public treasury;
     address public poolManager;
 
     constructor(
         address _vault,
         address _sanToken,
-        address _unirouter,
-        address _angleStableMaster,
         address _sanTokenGauge,
         address _poolManager
     ) public BaseStrategy(_vault) {
         // Constructor should initialize local variables
         _initializeStrategy(
             _sanToken,
-            _unirouter,
-            _angleStableMaster,
             _sanTokenGauge,
             _poolManager
         );
@@ -59,26 +51,20 @@ contract Strategy is BaseStrategy {
 
     function _initializeStrategy(
         address _sanToken,
-        address _unirouter,
-        address _angleStableMaster,
         address _sanTokenGauge,
         address _poolManager
     ) internal {
-        sanToken = _sanToken;
-        unirouter = _unirouter;
-        angleStableMaster = _angleStableMaster;
-        sanTokenGauge = _sanTokenGauge;
+        sanToken = IERC20(_sanToken);
+        sanTokenGauge = IAngleGauge(_sanTokenGauge);
         poolManager = _poolManager;
 
         percentKeep = 1000;
-        treasury = address(0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde);
+        treasury = 0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde;
         healthCheck = 0xDDCea799fF1699e98EDF118e0629A974Df7DF012;
+        doHealthCheck = true;
 
-        IERC20(want).safeApprove(angleStableMaster, type(uint256).max);
-        IERC20(sanToken).safeApprove(sanTokenGauge, type(uint256).max);
-        // IERC20(want).safeApprove(sanToken, type(uint256).max);
-        // IERC20(sanToken).safeApprove(angleStableMaster, type(uint256).max);
-        IERC20(angleToken).approve(unirouter, type(uint256).max);
+        IERC20(want).safeApprove(address(angleStableMaster), type(uint256).max);
+        IERC20(sanToken).safeApprove(_sanTokenGauge, type(uint256).max);
     }
 
     function initialize(
@@ -87,16 +73,12 @@ contract Strategy is BaseStrategy {
         address _rewards,
         address _keeper,
         address _sanToken,
-        address _unirouter,
-        address _angleStableMaster,
         address _sanTokenGauge,
         address _poolManager
     ) external {
         _initialize(_vault, _strategist, _rewards, _keeper);
         _initializeStrategy(
             _sanToken,
-            _unirouter,
-            _angleStableMaster,
             _sanTokenGauge,
             _poolManager
         );
@@ -108,8 +90,6 @@ contract Strategy is BaseStrategy {
         address _rewards,
         address _keeper,
         address _sanToken,
-        address _unirouter,
-        address _angleStableMaster,
         address _sanTokenGauge,
         address _poolManager
     ) external returns (address newStrategy) {
@@ -137,8 +117,6 @@ contract Strategy is BaseStrategy {
             _rewards,
             _keeper,
             _sanToken,
-            _unirouter,
-            _angleStableMaster,
             _sanTokenGauge,
             _poolManager
         );
@@ -158,7 +136,7 @@ contract Strategy is BaseStrategy {
 
     // returns sum of all assets, realized and unrealized
     function estimatedTotalAssets() public view override returns (uint256) {
-        return balanceOfWant() + valueOfStake() + valueOfSanToken();
+        return balanceOfWant() + valueOfStakedSanToken() + valueOfSanToken();
     }
 
     function prepareReturn(uint256 _debtOutstanding)
@@ -172,7 +150,7 @@ contract Strategy is BaseStrategy {
     {
         // First, claim & sell any rewards.
 
-        IAngleGauge(sanTokenGauge).claim_rewards();
+        sanTokenGauge.claim_rewards();
 
         uint256 _tokensAvailable = balanceOfAngleToken();
         if (_tokensAvailable > 0) {
@@ -238,7 +216,7 @@ contract Strategy is BaseStrategy {
         // Stake any san tokens, whether they originated through the above deposit or some other means (e.g. migration)
         uint256 _sanTokenBalance = balanceOfSanToken();
         if (_sanTokenBalance > 0) {
-            IAngleGauge(sanTokenGauge).deposit(_sanTokenBalance);
+            sanTokenGauge.deposit(_sanTokenBalance);
         }
     }
 
@@ -281,7 +259,7 @@ contract Strategy is BaseStrategy {
 
         uint256 _sanTokenBalance = balanceOfSanToken();
         if (_amountInSanToken > _sanTokenBalance) {
-            IAngleGauge(sanTokenGauge).withdraw(
+            sanTokenGauge.withdraw(
                 _amountInSanToken - _sanTokenBalance
             );
         }
@@ -309,8 +287,8 @@ contract Strategy is BaseStrategy {
     // transfers all tokens to new strategy
     function prepareMigration(address _newStrategy) internal override {
         // want is transferred by the base contract's migrate function
-        IAngleGauge(sanTokenGauge).claim_rewards();
-        IAngleGauge(sanTokenGauge).withdraw(balanceOfStake());
+        sanTokenGauge.claim_rewards();
+        sanTokenGauge.withdraw(balanceOfStakedSanToken());
 
         IERC20(sanToken).safeTransfer(_newStrategy, balanceOfSanToken());
         IERC20(angleToken).transfer(_newStrategy, balanceOfAngleToken());
@@ -362,24 +340,24 @@ contract Strategy is BaseStrategy {
         return want.balanceOf(address(this));
     }
 
-    function balanceOfStake() public view returns (uint256) {
-        return IERC20(sanTokenGauge).balanceOf(address(this));
+    function balanceOfStakedSanToken() public view returns (uint256) {
+        return IERC20(address(sanTokenGauge)).balanceOf(address(this));
     }
 
     function balanceOfSanToken() public view returns (uint256) {
-        return IERC20(sanToken).balanceOf(address(this));
+        return sanToken.balanceOf(address(this));
     }
 
     function balanceOfAngleToken() public view returns (uint256) {
-        return IERC20(angleToken).balanceOf(address(this));
+        return angleToken.balanceOf(address(this));
     }
 
     function valueOfSanToken() public view returns (uint256) {
         return sanTokenToWant(balanceOfSanToken());
     }
 
-    function valueOfStake() public view returns (uint256) {
-        return sanTokenToWant(balanceOfStake());
+    function valueOfStakedSanToken() public view returns (uint256) {
+        return sanTokenToWant(balanceOfStakedSanToken());
     }
 
     function sanTokenToWant(uint256 _sanTokenAmount)
