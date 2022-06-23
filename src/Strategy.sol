@@ -279,11 +279,11 @@ contract Strategy is BaseStrategy {
         uint256 _sanTokenBalance = balanceOfSanToken();
         if (_amountInSanToken > _sanTokenBalance) {
             sanTokenGauge.withdraw(
-                _amountInSanToken - _sanTokenBalance
+                Math.min(_amountInSanToken - _sanTokenBalance, balanceOfStakedSanToken())
             );
         }
 
-        withdrawFromStableMaster(_amountInSanToken);
+        withdrawFromStableMaster(Math.min(_amountInSanToken, balanceOfSanToken()));
     }
 
     // transfers all tokens to new strategy

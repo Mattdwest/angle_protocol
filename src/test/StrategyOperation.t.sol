@@ -326,7 +326,7 @@ contract StrategyOperationsTest is StrategyFixture {
             // As a technique to simulate losses, we increase slippage
             uint64 _baseParams = 1000000000;
             vm.prank(angleFeeManager);
-            stableMaster.setFeeKeeper(_baseParams, _baseParams, _baseParams / 1000, 0); // Set slippage to 0.01%
+            stableMaster.setFeeKeeper(_baseParams, _baseParams, _baseParams / 500, 0); // Set slippage to 0.02%
 
             vm.startPrank(gov);
             strategy.setEmergencyExit();
