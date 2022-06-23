@@ -8,12 +8,20 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
-import {BaseStrategy} from "@yearnvaults/contracts/BaseStrategy.sol";
+import {
+    BaseStrategy,
+    StrategyParams
+} from "@yearnvaults/contracts/BaseStrategy.sol";
 import {IERC20Metadata} from "@yearnvaults/contracts/yToken.sol";
 
 import "./interfaces/Angle/IStableMaster.sol";
 import "./interfaces/Angle/IAngleGauge.sol";
 import "./interfaces/Yearn/ITradeFactory.sol";
+import "./interfaces/Uniswap/IUniV2.sol";
+
+interface IBaseFee {
+    function isCurrentBaseFeeAcceptable() external view returns (bool);
+}
 
 contract Strategy is BaseStrategy {
     using SafeERC20 for IERC20;
@@ -32,8 +40,17 @@ contract Strategy is BaseStrategy {
     IERC20 public sanToken;
     IAngleGauge public sanTokenGauge;
     address public constant treasury = 0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde; // To change this, migrate
+    address public constant unirouter = 0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F; // SushiSwap
+    address public constant usdt = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
+    address public constant weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address public poolManager;
     address public tradeFactory = address(0);
+
+    // keeper stuff
+    uint256 public harvestProfitMin; // minimum size in USD (6 decimals) that we want to harvest
+    uint256 public harvestProfitMax; // maximum size in USD (6 decimals) that we want to harvest
+    uint256 public creditThreshold; // amount of credit in underlying tokens that will automatically trigger a harvest
+    bool internal forceHarvestTriggerOnce; // only set this to true when we want to trigger our keepers to harvest for us
 
     constructor(
         address _vault,
@@ -63,6 +80,11 @@ contract Strategy is BaseStrategy {
         percentKeep = 1000;
         healthCheck = 0xDDCea799fF1699e98EDF118e0629A974Df7DF012;
         doHealthCheck = true;
+
+        maxReportDelay = 21 days; // 21 days in seconds, if we hit this then harvestTrigger = True
+        harvestProfitMin = 2_000e6;
+        harvestProfitMax = 10_000e6;
+        creditThreshold = 1e6 * 1e18;
 
         IERC20(want).safeApprove(address(angleStableMaster), type(uint256).max);
         IERC20(sanToken).safeApprove(_sanTokenGauge, type(uint256).max);
@@ -291,7 +313,104 @@ contract Strategy is BaseStrategy {
         return _amtInWei;
     }
 
+    /* ========== KEEP3RS ========== */
+    // use this to determine when to harvest
+    function harvestTrigger(uint256 callCostinEth)
+        public
+        view
+        override
+        returns (bool)
+    {
+        // Should not trigger if strategy is not active (no assets and no debtRatio). This means we don't need to adjust keeper job.
+        if (!isActive()) {
+            return false;
+        }
+
+        // harvest if we have a profit to claim at our upper limit without considering gas price
+        uint256 claimableProfit = claimableProfitInUsdt();
+        if (claimableProfit > harvestProfitMax) {
+            return true;
+        }
+
+        // check if the base fee gas price is higher than we allow. if it is, block harvests.
+        if (!isBaseFeeAcceptable()) {
+            return false;
+        }
+
+        // trigger if we want to manually harvest, but only if our gas price is acceptable
+        if (forceHarvestTriggerOnce) {
+            return true;
+        }
+
+        // harvest if we have a sufficient profit to claim, but only if our gas price is acceptable
+        if (claimableProfit > harvestProfitMin) {
+            return true;
+        }
+
+        StrategyParams memory params = vault.strategies(address(this));
+        // harvest no matter what once we reach our maxDelay
+        if (block.timestamp - params.lastReport > maxReportDelay) {
+            return true;
+        }
+
+        // harvest our credit if it's above our threshold
+        if (vault.creditAvailable() > creditThreshold) {
+            return true;
+        }
+
+        // otherwise, we don't harvest
+        return false;
+    }
+
+    /// @notice The value in dollars that our claimable rewards are worth (in USDT, 6 decimals).
+    function claimableProfitInUsdt() public view returns (uint256) {
+        address[] memory path = new address[](3);
+        path[0] = address(angleToken);
+        path[1] = weth;
+        path[2] = address(usdt);
+
+        uint256 _claimableRewards = sanTokenGauge.claimable_reward(address(this), address(angleToken));
+
+        if (_claimableRewards < 1e18) { // Dust check
+            return 0;
+        }
+
+        uint256[] memory amounts = IUniV2(unirouter).getAmountsOut(
+            _claimableRewards,
+            path
+        );
+
+        return amounts[amounts.length - 1];
+    }
+
+    // check if the current baseFee is below our external target
+    function isBaseFeeAcceptable() internal view returns (bool) {
+        return
+            IBaseFee(0xb5e1CAcB567d98faaDB60a1fD4820720141f064F)
+                .isCurrentBaseFeeAcceptable();
+    }
+
+
     // ---------------------- SETTERS -----------------------
+
+    // This allows us to manually harvest with our keeper as needed
+    function setForceHarvestTriggerOnce(bool _forceHarvestTriggerOnce)
+        external
+        onlyVaultManagers
+    {
+        forceHarvestTriggerOnce = _forceHarvestTriggerOnce;
+    }
+
+    // Min profit to start checking for harvests if gas is good, max will harvest no matter gas (both in USDT, 6 decimals). Credit threshold is in want token, and will trigger a harvest if credit is large enough. check earmark to look at convex's booster.
+    function setHarvestTriggerParams(
+        uint256 _harvestProfitMin,
+        uint256 _harvestProfitMax,
+        uint256 _creditThreshold
+    ) external onlyVaultManagers {
+        harvestProfitMin = _harvestProfitMin;
+        harvestProfitMax = _harvestProfitMax;
+        creditThreshold = _creditThreshold;
+    }
 
     function setKeepInBips(uint256 _percentKeep) external onlyVaultManagers {
         require(

@@ -21,5 +21,7 @@ interface IAngleGauge {
 
     function balanceOf(address account) external view returns(uint256);
 
+    function claimable_reward(address _user, address _reward_token) external view returns (uint256);
+
 }
 
