@@ -31,7 +31,7 @@ contract Strategy is BaseStrategy {
     uint256 public percentKeep;
     IERC20 public sanToken;
     IAngleGauge public sanTokenGauge;
-    address public treasury;
+    address public constant treasury = 0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde; // To change this, migrate
     address public poolManager;
     address public tradeFactory = address(0);
 
@@ -61,7 +61,6 @@ contract Strategy is BaseStrategy {
         poolManager = _poolManager;
 
         percentKeep = 1000;
-        treasury = 0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde;
         healthCheck = 0xDDCea799fF1699e98EDF118e0629A974Df7DF012;
         doHealthCheck = true;
 
@@ -302,11 +301,6 @@ contract Strategy is BaseStrategy {
         percentKeep = _percentKeep;
     }
 
-    // where angleToken goes
-    function setTreasury(address _treasury) external onlyVaultManagers {
-        require(_treasury != address(0), "!zero_address");
-        treasury = _treasury;
-    }
 
     // ----------------- SUPPORT & UTILITY FUNCTIONS ----------
 
