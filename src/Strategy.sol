@@ -286,10 +286,14 @@ contract Strategy is BaseStrategy {
         withdrawFromStableMaster(Math.min(_amountInSanToken, balanceOfSanToken()));
     }
 
+    // can be used in conjunction with migration if this function is still working
+    function claimRewards() external onlyVaultManagers {
+        sanTokenGauge.claim_rewards();
+    }
+
     // transfers all tokens to new strategy
     function prepareMigration(address _newStrategy) internal override {
         // want is transferred by the base contract's migrate function
-        sanTokenGauge.claim_rewards();
         sanTokenGauge.withdraw(balanceOfStakedSanToken());
 
         IERC20(sanToken).safeTransfer(_newStrategy, balanceOfSanToken());
