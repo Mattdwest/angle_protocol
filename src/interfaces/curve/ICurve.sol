@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.6.12;
+pragma solidity ^0.8.12;
 
 interface ICurveFi {
     function get_virtual_price() external view returns (uint256);

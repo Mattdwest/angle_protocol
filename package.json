@@ -1,26 +1,17 @@
 {
-  "name": "yearn-protocol",
-  "devDependencies": {
-    "@commitlint/cli": "^11.0.0",
-    "@commitlint/config-conventional": "^11.0.0",
-    "ethlint": "^1.2.5",
-    "husky": "^4.3.0",
-    "prettier": "^2.1.2",
-    "prettier-plugin-solidity": "^1.0.0-alpha.57",
-    "pretty-quick": "^3.0.2"
-  },
-  "scripts": {
-    "lint": "pretty-quick --pattern '**/*.*(sol|json)' --verbose",
-    "lint:check": "prettier --check **/*.sol **/*.json",
-    "lint:fix": "black . && prettier --write **/*.sol **/*.json"
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "yarn lint:fix && git add .",
-      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
+    "name": "foundry_strategy_mix",
+    "devDependencies": {
+        "prettier": "^2.5.1",
+        "prettier-plugin-solidity": "^1.0.0-beta.19",
+        "pretty-quick": "^3.1.3",
+        "solc": "^0.8.12",
+        "solhint": "^3.3.7",
+        "solhint-plugin-prettier": "^0.0.5"
+    },
+    "scripts": {
+        "format": "prettier --write 'src/**/*.(sol|json)'",
+        "format:check": "prettier --check 'src/**/*.*(sol|json)'",
+        "lint": "solhint 'src/**/*.sol'",
+        "lint:fix": "solhint --fix 'src/**/*.sol'"
     }
-  },
-  "dependencies": {
-    "yearn": "^2.3.1"
   }
-}

@@ -1,10 +1,5 @@
-# Brownie
-__pycache__
-.history
-.hypothesis/
-build/
-reports/
+cache/
+out/
 .env
 
-# Node/npm
 node_modules/

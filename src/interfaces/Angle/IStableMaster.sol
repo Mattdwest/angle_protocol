@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 
 pragma experimental ABIEncoderV2;
-pragma solidity 0.6.12;
+pragma solidity ^0.8.12;
 
 // Struct to handle all the parameters to manage the fees
 // related to a given collateral pool (associated to the stablecoin)

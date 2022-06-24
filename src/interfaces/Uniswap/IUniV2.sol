@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.6.12;
+pragma solidity ^0.8.12;
 
-interface IUni {
+interface IUniV2 {
     function swapExactETHForTokens(
         uint256 amountOutMin,
         address[] calldata path,

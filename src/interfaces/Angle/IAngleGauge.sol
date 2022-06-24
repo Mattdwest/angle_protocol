@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.6.12;
+pragma solidity ^0.8.12;
 
 interface IAngleGauge {
 
@@ -20,6 +20,8 @@ interface IAngleGauge {
     function recoverERC20(address tokenAddress, address to, uint256 amount) external;
 
     function balanceOf(address account) external view returns(uint256);
+
+    function claimable_reward(address _user, address _reward_token) external view returns (uint256);
 
 }
 
