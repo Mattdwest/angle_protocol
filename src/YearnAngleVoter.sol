@@ -65,13 +65,8 @@ contract YearnAngleVoter {
     }
     
     function execute(address to, uint value, bytes calldata data) external returns (bool, bytes memory) {
-<<<<<<< HEAD:src/YearnAngleVoter.sol
-        require(msg.sender == strategy || msg.sender == governance, "!governance");
-        (bool success, bytes memory result) = to.call{value: value}(data);
-=======
         require(msg.sender == proxy || msg.sender == governance, "!governance");
-        (bool success, bytes memory result) = to.call.value(value)(data);
->>>>>>> 23a283f (fix: naming convention for proxy, setProxy):contracts/YearnAngleVoter.sol
+        (bool success, bytes memory result) = to.call{value: value}(data);
         
         return (success, result);
     }

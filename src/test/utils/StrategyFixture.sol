@@ -79,7 +79,7 @@ contract StrategyFixture is ExtendedTest {
         voter = YearnAngleVoter(_voter);
         voterProxy = AngleStrategyVoterProxy(_voterProxy);
         vm.prank(gov);
-        voter.setStrategy(_voterProxy);
+        voter.setProxy(_voterProxy);
 
         string[2] memory _tokensToTest = ["USDC", "DAI"];
 
@@ -152,14 +152,14 @@ contract StrategyFixture is ExtendedTest {
 
     function deployStrategyVoterProxy(address _voter) public returns (address) {
         AngleStrategyVoterProxy _voterProxy = new AngleStrategyVoterProxy(_voter);
-        _voterProxy.setGovernance(gov);
+        //_voterProxy.setGovernance(gov);
 
         return address(_voterProxy);
     }
 
     function deployAngleVoter() public returns (address) {
         YearnAngleVoter _voter = new YearnAngleVoter();
-        _voter.setGovernance(gov);
+        //_voter.setGovernance(gov);
 
         return address(_voter);
     }

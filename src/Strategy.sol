@@ -41,21 +41,12 @@ contract Strategy is BaseStrategy {
 
     // variable for determining how much governance token to hold for voting rights
     uint256 public percentKeep;
-<<<<<<< HEAD:src/Strategy.sol
     IERC20 public sanToken;
     IAngleGauge public sanTokenGauge;
     address public constant treasury = 0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde; // To change this, migrate
     address public constant unirouter = 0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F; // SushiSwap
     address public constant usdt = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
     address public constant weth = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
-=======
-    address public sanToken;
-    address public angleToken;
-    address public unirouter;
-    address public angleStableMaster;
-    address public sanTokenGauge;
-    address public treasury;
->>>>>>> f5f31cf (fix: remove percentLock):contracts/StrategyAngleUSDC.sol
     address public poolManager;
     address public tradeFactory = address(0);
 
@@ -95,10 +86,6 @@ contract Strategy is BaseStrategy {
         strategyProxy = AngleStrategyVoterProxy(_strategyProxy);
 
         percentKeep = 1000;
-<<<<<<< HEAD:src/Strategy.sol
-=======
-        treasury = address(0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde);
->>>>>>> b1e4049 (fix: remove percentLock setter):contracts/StrategyAngleUSDC.sol
         healthCheck = 0xDDCea799fF1699e98EDF118e0629A974Df7DF012;
         doHealthCheck = true;
 
@@ -196,26 +183,7 @@ contract Strategy is BaseStrategy {
             uint256 _debtPayment
         )
     {
-<<<<<<< HEAD:src/Strategy.sol
         // Run initial profit + loss calculations.
-=======
-        // First, claim & sell any rewards.
-
-        // IAngleGauge(sanTokenGauge).claim_rewards();
-        strategyProxy.claimRewards(sanTokenGauge, angleToken);
-
-        uint256 _tokensAvailable = balanceOfAngleToken();
-        if (_tokensAvailable > 0) {
-            uint256 _tokensToKeep =
-                _tokensAvailable.mul(percentKeep).div(MAX_BPS);
-            if (_tokensToKeep > 0) {
-                IERC20(angleToken).transfer(address(strategyProxy), _tokensToKeep);
-                _swap(_tokensAvailable.sub(_tokensToKeep), address(angleToken));
-            }
-        }
-
-        // Second, run initial profit + loss calculations.
->>>>>>> f5f31cf (fix: remove percentLock):contracts/StrategyAngleUSDC.sol
 
         uint256 _totalAssets = estimatedTotalAssets();
         uint256 _totalDebt = vault.strategies(address(this)).totalDebt;
@@ -256,10 +224,10 @@ contract Strategy is BaseStrategy {
 
         uint256 _tokensAvailable = balanceOfAngleToken();
         if (_tokensAvailable > 0) {
-            uint256 _tokensToLock =
+            uint256 _tokensToKeep =
                 (_tokensAvailable * percentKeep) / MAX_BPS;
-            if (_tokensToLock > 0) {
-                IERC20(angleToken).transfer(address(strategyProxy), _tokensToLock);
+            if (_tokensToKeep > 0) {
+                IERC20(angleToken).transfer(address(strategyProxy), _tokensToKeep);
             }
         }
 
@@ -341,24 +309,23 @@ contract Strategy is BaseStrategy {
 
     // transfers all tokens to new strategy
     function prepareMigration(address _newStrategy) internal override {
-<<<<<<< HEAD:src/Strategy.sol
         // want is transferred by the base contract's migrate function
         sanTokenGauge.withdraw(balanceOfStakedSanToken());
 
-        IERC20(sanToken).safeTransfer(_newStrategy, IERC20(sanToken).balanceOf(address(this)));
-        IERC20(angleToken).transfer(_newStrategy, balanceOfAngleToken());
-=======
         uint256 _angleBalance = balanceOfAngleToken();
         if(_angleBalance > 0) {
             IERC20(angleToken).safeTransfer(_newStrategy, _angleBalance);
         }
-        uint256 _stakedBalance = balanceOfStake();
+
+        uint256 _stakedBalance = balanceOfStakedSanToken();
         if (_stakedBalance > 0) {
-            strategyProxy.withdraw(sanTokenGauge, sanToken, _stakedBalance);
+            strategyProxy.withdraw(address(sanTokenGauge), address(sanToken), _stakedBalance);
             IERC20(sanToken).safeTransfer(address(strategyProxy), _stakedBalance);
             withdrawFromStableMaster(_stakedBalance);
         }
->>>>>>> 8372725 (feat: changed prepareMigration logic to convert back to want):contracts/StrategyAngleUSDC.sol
+
+        IERC20(sanToken).safeTransfer(_newStrategy, IERC20(sanToken).balanceOf(address(this)));
+        IERC20(angleToken).transfer(_newStrategy, balanceOfAngleToken());
     }
 
     function protectedTokens()
@@ -484,15 +451,6 @@ contract Strategy is BaseStrategy {
         );
         percentKeep = _percentKeep;
     }
-
-<<<<<<< HEAD:src/Strategy.sol
-=======
-    // where angleToken goes
-    function setTreasury(address _treasury) external onlyVaultManagers {
-        require(_treasury != address(0), "!zero_address");
-        treasury = _treasury;
-    }
->>>>>>> b1e4049 (fix: remove percentLock setter):contracts/StrategyAngleUSDC.sol
 
     // ----------------- SUPPORT & UTILITY FUNCTIONS ----------
 
