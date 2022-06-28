@@ -103,8 +103,8 @@ contract AngleStrategyVoterProxy {
     }
 
     function withdrawFromStableMaster(address stableMaster, uint256 amount, 
-        address poolManager, address token) external {
-        require(strategies[stableMaster] == msg.sender, "!strategy");
+        address poolManager, address token, address gauge) external {
+        require(strategies[gauge] == msg.sender, "!strategy");
 
         IERC20(token).safeTransfer(address(yearnAngleVoter), amount);
 
@@ -142,8 +142,8 @@ contract AngleStrategyVoterProxy {
     }
 
     function depositToStableMaster(address stableMaster, uint256 amount, 
-        address poolManager, address token) external {
-        require(strategies[stableMaster] == msg.sender, "!strategy");
+        address poolManager, address token, address gauge) external {
+        require(strategies[gauge] == msg.sender, "!strategy");
         
         IERC20(token).safeTransfer(address(yearnAngleVoter), amount);
 

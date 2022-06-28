@@ -503,7 +503,8 @@ contract Strategy is BaseStrategy {
             address(angleStableMaster),
             _amount,
             poolManager,
-            address(want)
+            address(want),
+            address(sanTokenGauge)
         );
     }
 
@@ -512,7 +513,8 @@ contract Strategy is BaseStrategy {
             address(angleStableMaster),
             _amountInSanToken,
             poolManager,
-            address(sanToken)
+            address(sanToken),
+            address(sanTokenGauge)
         );
     }
 

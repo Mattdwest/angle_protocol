@@ -81,7 +81,7 @@ contract StrategyFixture is ExtendedTest {
         vm.prank(gov);
         voter.setProxy(_voterProxy);
 
-        string[2] memory _tokensToTest = ["USDC", "DAI"];
+        string[1] memory _tokensToTest = ["USDC"];
 
         for (uint8 i = 0; i < _tokensToTest.length; ++i) {
             string memory _tokenToTest = _tokensToTest[i];
@@ -190,8 +190,8 @@ contract StrategyFixture is ExtendedTest {
 
         vm.prank(gov);
         voterProxy.approveStrategy(gaugeAddrs[_tokenSymbol], address(_strategy));
-        vm.prank(gov);
-        voterProxy.approveStrategy(address(stableMaster), address(_strategy));
+        // vm.prank(gov);
+        // voterProxy.approveStrategy(address(stableMaster), address(_strategy));
 
         return address(_strategy);
     }
