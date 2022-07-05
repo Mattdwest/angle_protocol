@@ -1,19 +1,15 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.12;
-import "forge-std/console.sol";
 
 import {StrategyFixture} from "./utils/StrategyFixture.sol";
 import {IVault} from "../interfaces/Yearn/Vault.sol";
 import {Strategy} from "../Strategy.sol";
+import {AngleStrategyVoterProxy} from "../AngleStrategyVoterProxy.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@yearnvaults/contracts/yToken.sol";
-import "../interfaces/Angle/IStableMaster.sol";
-import "../interfaces/Yearn/ITradeFactory.sol";
 
 contract StrategyCloneTest is StrategyFixture {
-    // setup is run on before each test
     function setUp() public override {
-        // setup vault
         super.setUp();
     }
 
@@ -24,6 +20,7 @@ contract StrategyCloneTest is StrategyFixture {
             IVault vault = _assetFixture.vault;
             Strategy strategy = _assetFixture.strategy;
             IERC20 want = _assetFixture.want;
+            AngleStrategyVoterProxy voterProxy = strategy.strategyProxy();
 
             uint256 _amount = _fuzzAmount;
             uint8 _wantDecimals = IERC20Metadata(address(want)).decimals();
@@ -34,22 +31,31 @@ contract StrategyCloneTest is StrategyFixture {
             }
 
             deal(address(want), user, _amount);
+            string memory tokenSymbol = IERC20Metadata(address(want)).symbol();
+            vm.prank(gov);
+            voterProxy.approveStrategy(gaugeAddrs[tokenSymbol], address(strategy));
 
-            string memory _tokenSymbol = IERC20Metadata(address(want)).symbol();
+            vm.prank(user);
+            want.approve(address(vault), _amount);
+
+            vm.prank(user);
+            vault.deposit(_amount);
 
             address _newStrategy = strategy.cloneAngle(
                 address(vault),
                 strategist,
                 rewards,
                 keeper,
-                sanTokenAddrs[_tokenSymbol], 
-                gaugeAddrs[_tokenSymbol],
-                poolManagerAddrs[_tokenSymbol],
+                sanTokenAddrs[tokenSymbol], 
+                gaugeAddrs[tokenSymbol],
+                poolManagerAddrs[tokenSymbol],
                 address(voterProxy)
             );
 
             vm.prank(gov);
             vault.migrateStrategy(address(strategy), _newStrategy);
+            vm.prank(gov);
+            voterProxy.approveStrategy(gaugeAddrs[tokenSymbol], address(_newStrategy));
 
             strategy = Strategy(_newStrategy);
 
@@ -84,6 +90,7 @@ contract StrategyCloneTest is StrategyFixture {
             IVault vault = _assetFixture.vault;
             Strategy strategy = _assetFixture.strategy;
             IERC20 want = _assetFixture.want;
+            AngleStrategyVoterProxy voterProxy = strategy.strategyProxy();
 
             uint256 _amount = _fuzzAmount;
             uint8 _wantDecimals = IERC20Metadata(address(want)).decimals();
@@ -94,22 +101,25 @@ contract StrategyCloneTest is StrategyFixture {
             }
 
             deal(address(want), user, _amount);
-
-            string memory _tokenSymbol = IERC20Metadata(address(want)).symbol();
+            string memory tokenSymbol = IERC20Metadata(address(want)).symbol();
+            vm.prank(gov);
+            voterProxy.approveStrategy(gaugeAddrs[tokenSymbol], address(strategy));
 
             address _newStrategy = strategy.cloneAngle(
                 address(vault),
                 strategist,
                 rewards,
                 keeper,
-                sanTokenAddrs[_tokenSymbol], 
-                gaugeAddrs[_tokenSymbol],
-                poolManagerAddrs[_tokenSymbol],
+                sanTokenAddrs[tokenSymbol], 
+                gaugeAddrs[tokenSymbol],
+                poolManagerAddrs[tokenSymbol],
                 address(voterProxy)
             );
 
             vm.prank(gov);
             vault.migrateStrategy(address(strategy), _newStrategy);
+            vm.prank(gov);
+            voterProxy.approveStrategy(gaugeAddrs[tokenSymbol], address(_newStrategy));
 
             strategy = Strategy(_newStrategy);
 
@@ -119,9 +129,9 @@ contract StrategyCloneTest is StrategyFixture {
                 strategist,
                 rewards,
                 keeper,
-                sanTokenAddrs[_tokenSymbol], 
-                gaugeAddrs[_tokenSymbol],
-                poolManagerAddrs[_tokenSymbol],
+                sanTokenAddrs[tokenSymbol], 
+                gaugeAddrs[tokenSymbol],
+                poolManagerAddrs[tokenSymbol],
                 address(voterProxy)
             );
         }
@@ -134,6 +144,7 @@ contract StrategyCloneTest is StrategyFixture {
             IVault vault = _assetFixture.vault;
             Strategy strategy = _assetFixture.strategy;
             IERC20 want = _assetFixture.want;
+            AngleStrategyVoterProxy voterProxy = strategy.strategyProxy();
 
             uint256 _amount = _fuzzAmount;
             uint8 _wantDecimals = IERC20Metadata(address(want)).decimals();
@@ -144,6 +155,9 @@ contract StrategyCloneTest is StrategyFixture {
             }
 
             deal(address(want), user, _amount);
+            string memory tokenSymbol = IERC20Metadata(address(want)).symbol();
+            vm.prank(gov);
+            voterProxy.approveStrategy(gaugeAddrs[tokenSymbol], address(strategy));
 
             string memory _tokenSymbol = IERC20Metadata(address(want)).symbol();
 

@@ -310,7 +310,7 @@ contract Strategy is BaseStrategy {
     // transfers all tokens to new strategy
     function prepareMigration(address _newStrategy) internal override {
         // want is transferred by the base contract's migrate function
-        sanTokenGauge.withdraw(balanceOfStakedSanToken());
+        // sanTokenGauge.withdraw(balanceOfStakedSanToken());
 
         uint256 _angleBalance = balanceOfAngleToken();
         if(_angleBalance > 0) {
@@ -459,7 +459,7 @@ contract Strategy is BaseStrategy {
     }
 
     function balanceOfStakedSanToken() public view returns (uint256) {
-        strategyProxy.balanceOf(address(sanTokenGauge));
+        return strategyProxy.balanceOf(address(sanTokenGauge));
     }
 
     function balanceOfSanToken() public view returns (uint256) {

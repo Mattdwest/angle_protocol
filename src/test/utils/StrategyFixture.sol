@@ -188,8 +188,8 @@ contract StrategyFixture is ExtendedTest {
         vm.prank(gov);
         _strategy.setTradeFactory(address(tradeFactory));
 
-        vm.prank(gov);
-        voterProxy.approveStrategy(gaugeAddrs[_tokenSymbol], address(_strategy));
+        // vm.prank(gov);
+        // voterProxy.approveStrategy(gaugeAddrs[_tokenSymbol], address(_strategy));
         // vm.prank(gov);
         // voterProxy.approveStrategy(address(stableMaster), address(_strategy));
 

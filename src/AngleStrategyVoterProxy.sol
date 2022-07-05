@@ -88,12 +88,14 @@ contract AngleStrategyVoterProxy {
         require(voters[msg.sender], "!voter");
         yearnAngleVoter.safeExecute(_gauge, 0, abi.encodeWithSignature("vote_for_gauge_weights(address,uint256)", _gauge, _amount));
     }
-
+    event fire(address _ad);
     function withdraw(
         address _gauge,
         address _token,
         uint256 _amount
     ) public returns (uint256) {
+        emit fire(msg.sender);
+        emit fire(strategies[_gauge]);
         require(strategies[_gauge] == msg.sender, "!strategy");
         uint256 _balance = IERC20(_token).balanceOf(address(yearnAngleVoter));
         yearnAngleVoter.safeExecute(_gauge, 0, abi.encodeWithSignature("withdraw(uint256)", _amount));
