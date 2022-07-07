@@ -31,9 +31,6 @@ contract HandleAngleHackTest is StrategyFixture {
             }
 
             deal(address(want), user, _amount);
-            string memory tokenSymbol = IERC20Metadata(address(want)).symbol();
-            vm.prank(gov);
-            voterProxy.approveStrategy(gaugeAddrs[tokenSymbol], address(strategy));
 
             uint256 _balanceBefore = want.balanceOf(address(user));
 
