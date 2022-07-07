@@ -8,6 +8,7 @@ import {ExtendedTest} from "./ExtendedTest.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {IVault} from "../../interfaces/Yearn/Vault.sol";
 import "../../interfaces/Angle/IStableMaster.sol";
+import "../../interfaces/Angle/IAngleWhitelister.sol";
 import "../../interfaces/Yearn/ITradeFactory.sol";
 
 import {Strategy} from "../../Strategy.sol";
@@ -53,9 +54,12 @@ contract StrategyFixture is ExtendedTest {
     address public constant sushiswapSwapper = 0x408Ec47533aEF482DC8fA568c36EC0De00593f44;
     address public constant angleFeeManager = 0x97B6897AAd7aBa3861c04C0e6388Fc02AF1F227f;
     address public constant yearnTreasuryVault = 0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde;
+    address public constant angleWhitelisterAdmin = 0xdC4e6DFe07EFCa50a197DF15D9200883eF4Eb1c8;
 
+    IAngleWhitelister angleWhiteLister = IAngleWhitelister(0xAa241Ccd398feC742f463c534a610529dCC5888E);
     ITradeFactory public constant tradeFactory = ITradeFactory(0x7BAF843e06095f68F4990Ca50161C2C4E4e01ec6);
     IERC20 public constant angleToken = IERC20(0x31429d1856aD1377A8A0079410B297e1a9e214c2);
+    IERC20 public constant veAngleToken = IERC20(0x0C462Dbb9EC8cD1630f1728B2CFD2769d09f0dd5);
 
     IStableMaster public constant stableMaster = IStableMaster(0x5adDc89785D75C86aB939E9e15bfBBb7Fc086A87);
 
@@ -160,6 +164,8 @@ contract StrategyFixture is ExtendedTest {
     function deployAngleVoter() public returns (address) {
         YearnAngleVoter _voter = new YearnAngleVoter();
         //_voter.setGovernance(gov);
+        vm.prank(angleWhitelisterAdmin);
+        angleWhiteLister.approveWallet(address(_voter));
 
         return address(_voter);
     }
@@ -168,7 +174,8 @@ contract StrategyFixture is ExtendedTest {
     function deployStrategy(
         address _vault,
         address _voterProxy,
-        string memory _tokenSymbol
+        string memory _tokenSymbol,
+        bool _addStrat
     ) public returns (address) {
         Strategy _strategy = new Strategy(
             _vault, 
@@ -188,10 +195,10 @@ contract StrategyFixture is ExtendedTest {
         vm.prank(gov);
         _strategy.setTradeFactory(address(tradeFactory));
 
-        // vm.prank(gov);
-        // voterProxy.approveStrategy(gaugeAddrs[_tokenSymbol], address(_strategy));
-        // vm.prank(gov);
-        // voterProxy.approveStrategy(address(stableMaster), address(_strategy));
+        if(_addStrat == true) {
+            vm.prank(gov);
+            voterProxy.approveStrategy(gaugeAddrs[_tokenSymbol], address(_strategy));
+        }
 
         return address(_strategy);
     }
@@ -225,7 +232,8 @@ contract StrategyFixture is ExtendedTest {
         _strategyAddr = deployStrategy(
             _vaultAddr,
             _voterProxy,
-            _tokenSymbol
+            _tokenSymbol,
+            true
         );
         Strategy _strategy = Strategy(_strategyAddr);
 
