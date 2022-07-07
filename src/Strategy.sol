@@ -291,15 +291,16 @@ contract Strategy is BaseStrategy {
 
         uint256 _sanTokenBalance = balanceOfSanToken();
         if (_amountInSanToken > _sanTokenBalance) {
+            _amountInSanToken = Math.min(_amountInSanToken - _sanTokenBalance, balanceOfStakedSanToken());
             strategyProxy.withdraw(
                 address(sanTokenGauge),
                 address(sanToken),
-                Math.min(_amountInSanToken - _sanTokenBalance, balanceOfStakedSanToken())
+                _amountInSanToken
             );
+            IERC20(sanToken).safeTransfer(address(strategyProxy), _amountInSanToken);
         }
 
-        IERC20(sanToken).safeTransfer(address(strategyProxy), _amountInSanToken); // Q: what does this do? Didn't want to remove it
-        withdrawFromStableMaster(Math.min(_amountInSanToken, balanceOfSanToken()));
+        withdrawFromStableMaster(Math.min(_amountInSanToken, _amountInSanToken));
     }
 
     // can be used in conjunction with migration if this function is still working
