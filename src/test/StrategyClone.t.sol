@@ -32,8 +32,8 @@ contract StrategyCloneTest is StrategyFixture {
 
             deal(address(want), user, _amount);
             string memory tokenSymbol = IERC20Metadata(address(want)).symbol();
-            vm.prank(gov);
-            voterProxy.approveStrategy(gaugeAddrs[tokenSymbol], address(strategy));
+
+            uint256 _balanceBefore = want.balanceOf(address(user));
 
             vm.prank(user);
             want.approve(address(vault), _amount);
@@ -58,14 +58,6 @@ contract StrategyCloneTest is StrategyFixture {
             voterProxy.approveStrategy(gaugeAddrs[tokenSymbol], address(_newStrategy));
 
             strategy = Strategy(_newStrategy);
-
-            uint256 _balanceBefore = want.balanceOf(address(user));
-
-            vm.prank(user);
-            want.approve(address(vault), _amount);
-
-            vm.prank(user);
-            vault.deposit(_amount);
 
             skip(3 minutes);
             vm.prank(strategist);
@@ -102,8 +94,6 @@ contract StrategyCloneTest is StrategyFixture {
 
             deal(address(want), user, _amount);
             string memory tokenSymbol = IERC20Metadata(address(want)).symbol();
-            vm.prank(gov);
-            voterProxy.approveStrategy(gaugeAddrs[tokenSymbol], address(strategy));
 
             address _newStrategy = strategy.cloneAngle(
                 address(vault),
@@ -155,9 +145,6 @@ contract StrategyCloneTest is StrategyFixture {
             }
 
             deal(address(want), user, _amount);
-            string memory tokenSymbol = IERC20Metadata(address(want)).symbol();
-            vm.prank(gov);
-            voterProxy.approveStrategy(gaugeAddrs[tokenSymbol], address(strategy));
 
             string memory _tokenSymbol = IERC20Metadata(address(want)).symbol();
 
