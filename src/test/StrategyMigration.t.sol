@@ -35,8 +35,6 @@ contract StrategyMigrationTest is StrategyFixture {
 
             // Deposit to the vault and harvest
             string memory tokenSymbol = IERC20Metadata(address(want)).symbol();
-            vm.prank(gov);
-            voterProxy.approveStrategy(gaugeAddrs[tokenSymbol], address(strategy));
             vm.prank(user);
             want.approve(address(vault), _amount);
             vm.prank(user);
@@ -48,7 +46,7 @@ contract StrategyMigrationTest is StrategyFixture {
 
             // Migrate to a new strategy
             vm.prank(strategist);
-            Strategy newStrategy = Strategy(deployStrategy(address(vault), address(voterProxy), IERC20Metadata(address(want)).symbol()));
+            Strategy newStrategy = Strategy(deployStrategy(address(vault), address(voterProxy), IERC20Metadata(address(want)).symbol(), false)); 
             vm.prank(gov);
             strategy.claimRewards(); // manual claim rewards
             vm.prank(gov);
