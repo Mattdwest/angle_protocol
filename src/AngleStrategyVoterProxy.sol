@@ -31,7 +31,7 @@ contract AngleStrategyVoterProxy {
     using Address for address;
 
     YearnAngleVoter public yearnAngleVoter;
-    address public constant angle = address(0x31429d1856aD1377A8A0079410B297e1a9e214c2);
+    address public constant angleToken = address(0x31429d1856aD1377A8A0079410B297e1a9e214c2);
 
     // gauge => strategies
     mapping(address => address) public strategies;
@@ -70,14 +70,14 @@ contract AngleStrategyVoterProxy {
 
     function lock(uint256 amount, uint256 unlockTime) external {
         if (amount > 0) {
-            IERC20(angle).transfer(address(yearnAngleVoter), amount);
+            IERC20(angleToken).transfer(address(yearnAngleVoter), amount);
             yearnAngleVoter.createLock(amount, unlockTime);
         }
     }
 
     function increaseAmount(uint256 amount) external {
         if (amount > 0) {
-            IERC20(angle).transfer(address(yearnAngleVoter), amount);
+            IERC20(angleToken).transfer(address(yearnAngleVoter), amount);
             yearnAngleVoter.increaseAmount(amount);
         }
     }
