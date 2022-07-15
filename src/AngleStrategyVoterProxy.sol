@@ -106,9 +106,6 @@ contract AngleStrategyVoterProxy {
 
         IERC20(token).safeTransfer(address(yearnAngleVoter), amount);
 
-        yearnAngleVoter.safeExecute(token, 0, abi.encodeWithSignature("approve(address,uint256)", stableMaster, 0));
-        yearnAngleVoter.safeExecute(token, 0, abi.encodeWithSignature("approve(address,uint256)", stableMaster, amount));
-
         yearnAngleVoter.safeExecute(stableMaster, 0, abi.encodeWithSignature(
             "withdraw(uint256,address,address,address)", 
             amount,
@@ -130,8 +127,7 @@ contract AngleStrategyVoterProxy {
     function deposit(address gauge, uint256 amount, address token) external {
         require(strategies[gauge] == msg.sender, "!strategy");
 
-        yearnAngleVoter.safeExecute(token, 0, abi.encodeWithSignature("approve(address,uint256)", gauge, 0));
-        yearnAngleVoter.safeExecute(token, 0, abi.encodeWithSignature("approve(address,uint256)", gauge, amount));
+        _checkAllowance(token, gauge, amount);
 
         yearnAngleVoter.safeExecute(gauge, 0, abi.encodeWithSignature(
             "deposit(uint256)", 
@@ -145,8 +141,8 @@ contract AngleStrategyVoterProxy {
         
         IERC20(token).safeTransfer(address(yearnAngleVoter), amount);
 
-        yearnAngleVoter.safeExecute(token, 0, abi.encodeWithSignature("approve(address,uint256)", stableMaster, 0));
-        yearnAngleVoter.safeExecute(token, 0, abi.encodeWithSignature("approve(address,uint256)", stableMaster, amount));
+        _checkAllowance(token, stableMaster, amount);
+
         yearnAngleVoter.safeExecute(stableMaster, 0, abi.encodeWithSignature(
             "deposit(uint256,address,address)", 
             amount,
@@ -169,5 +165,16 @@ contract AngleStrategyVoterProxy {
 
     function balanceOfSanToken(address sanToken) public view returns (uint256) {
         return IERC20(sanToken).balanceOf(address(yearnAngleVoter));
+    }
+
+    function _checkAllowance(
+        address _token,
+        address _contract,
+        uint256 _amount
+    ) internal {
+        if (IERC20(_token).allowance(address(yearnAngleVoter), _contract) < _amount) {
+            yearnAngleVoter.safeExecute(_token, 0, abi.encodeWithSignature("approve(address,uint256)", _contract, 0));
+            yearnAngleVoter.safeExecute(_token, 0, abi.encodeWithSignature("approve(address,uint256)", _contract, _amount));
+        }
     }
 }
