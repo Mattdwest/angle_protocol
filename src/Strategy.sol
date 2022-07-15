@@ -249,7 +249,7 @@ contract Strategy is BaseStrategy {
         // Stake any san tokens, whether they originated through the above deposit or some other means (e.g. migration)
         uint256 _sanTokenBalance = balanceOfSanToken();
         if (_sanTokenBalance > 0) {
-            strategyProxy.deposit(address(sanTokenGauge), _sanTokenBalance, address(sanToken));
+            strategyProxy.stake(address(sanTokenGauge), _sanTokenBalance, address(sanToken));
         }
     }
 

@@ -124,7 +124,7 @@ contract AngleStrategyVoterProxy {
         return withdraw(_gauge, _token, balanceOf(_gauge));
     }
 
-    function deposit(address gauge, uint256 amount, address token) external {
+    function stake(address gauge, uint256 amount, address token) external {
         require(strategies[gauge] == msg.sender, "!strategy");
 
         _checkAllowance(token, gauge, amount);
