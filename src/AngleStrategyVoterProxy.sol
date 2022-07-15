@@ -151,7 +151,7 @@ contract AngleStrategyVoterProxy {
             ));
     }
 
-    function claimRewards(address _gauge, address _token) external {
+    function claimRewards(address _gauge) external {
         require(strategies[_gauge] == msg.sender, "!strategy");
         yearnAngleVoter.safeExecute(
             _gauge, 
@@ -160,6 +160,7 @@ contract AngleStrategyVoterProxy {
                 IAngleGauge.claim_rewards.selector
             )
         );
+        address _token = address(angleToken);
         yearnAngleVoter.safeExecute(_token, 0, abi.encodeWithSignature("transfer(address,uint256)", msg.sender, IERC20(_token).balanceOf(address(yearnAngleVoter))));
     }
 

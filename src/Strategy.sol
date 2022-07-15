@@ -220,7 +220,7 @@ contract Strategy is BaseStrategy {
         }
 
         // Claim rewards here so that we can chain tend() -> yswap sell -> harvest() in a single transaction
-        strategyProxy.claimRewards(address(sanTokenGauge), address(angleToken));
+        strategyProxy.claimRewards(address(sanTokenGauge));
 
         uint256 _tokensAvailable = balanceOfAngleToken();
         if (_tokensAvailable > 0) {
