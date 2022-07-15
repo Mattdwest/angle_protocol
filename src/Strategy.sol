@@ -311,10 +311,9 @@ contract Strategy is BaseStrategy {
     // transfers all tokens to new strategy
     function prepareMigration(address _newStrategy) internal override {
         // want is transferred by the base contract's migrate function
-        // sanTokenGauge.withdraw(balanceOfStakedSanToken());
 
         uint256 _angleBalance = balanceOfAngleToken();
-        if(_angleBalance > 0) {
+        if (_angleBalance > 0) {
             IERC20(angleToken).safeTransfer(_newStrategy, _angleBalance);
         }
 
