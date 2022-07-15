@@ -36,15 +36,13 @@ contract YearnAngleVoter {
     
     function createLock(uint256 _value, uint256 _unlockTime) external {
         require(msg.sender == proxy || msg.sender == governance, "!authorized");
-        IERC20(angle).safeApprove(veAngle, 0);
-        IERC20(angle).safeApprove(veAngle, _value);
+        IERC20(angle).approve(veAngle, _value);
         IVoteEscrow(veAngle).create_lock(_value, _unlockTime);
     }
     
     function increaseAmount(uint _value) external {
         require(msg.sender == proxy || msg.sender == governance, "!authorized");
-        IERC20(angle).safeApprove(veAngle, 0);
-        IERC20(angle).safeApprove(veAngle, _value);
+        IERC20(angle).approve(veAngle, _value);
         IVoteEscrow(veAngle).increase_amount(_value);
     }
     
