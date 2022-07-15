@@ -300,7 +300,7 @@ contract Strategy is BaseStrategy {
             IERC20(sanToken).safeTransfer(address(strategyProxy), _amountInSanToken);
         }
 
-        withdrawFromStableMaster(Math.min(_amountInSanToken, _amountInSanToken));
+        withdrawFromStableMaster(_amountInSanToken);
     }
 
     // can be used in conjunction with migration if this function is still working
