@@ -115,13 +115,13 @@ contract AngleStrategyVoterProxy {
             ));
     }
 
-    function balanceOf(address _gauge) public view returns (uint256) {
+    function balanceOfStakedSanToken(address _gauge) public view returns (uint256) {
         return IERC20(_gauge).balanceOf(address(yearnAngleVoter));
     }
 
     function withdrawAll(address _gauge, address _token) external returns (uint256) {
         require(strategies[_gauge] == msg.sender, "!strategy");
-        return withdraw(_gauge, _token, balanceOf(_gauge));
+        return withdraw(_gauge, _token, balanceOfStakedSanToken(_gauge));
     }
 
     function stake(address gauge, uint256 amount, address token) external {

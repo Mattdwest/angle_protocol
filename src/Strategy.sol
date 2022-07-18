@@ -459,7 +459,7 @@ contract Strategy is BaseStrategy {
     }
 
     function balanceOfStakedSanToken() public view returns (uint256) {
-        return strategyProxy.balanceOf(address(sanTokenGauge));
+        return strategyProxy.balanceOfStakedSanToken(address(sanTokenGauge));
     }
 
     function balanceOfSanToken() public view returns (uint256) {
