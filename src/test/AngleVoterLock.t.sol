@@ -54,25 +54,25 @@ contract AngleVoterLock is StrategyFixture {
             // Airdrop 1 angle for every $1000
             deal(address(angleToken), address(strategy), _fuzzAmount / 1000);
 
-            uint256 _proxyAngleBalanceBefore = angleToken.balanceOf(address(voterProxy));
+            uint256 _voterAngleBalanceBefore = angleToken.balanceOf(address(voter));
             vm.prank(strategist);
             strategy.tend();
             uint256 _angleTokenBalance = strategy.balanceOfAngleToken();
             assertGt(_angleTokenBalance, 0);
 
-            uint256 _proxyAngleBalanceAfter = angleToken.balanceOf(address(voterProxy));
-            assertGt(_proxyAngleBalanceAfter, _proxyAngleBalanceBefore);
-            assertRelApproxEq(_proxyAngleBalanceAfter - _proxyAngleBalanceBefore, _angleTokenBalance / 9, DELTA);
+            uint256 _voterAngleBalanceAfter = angleToken.balanceOf(address(voter));
+            assertGt(_voterAngleBalanceAfter, _voterAngleBalanceBefore);
+            assertRelApproxEq(_voterAngleBalanceAfter - _voterAngleBalanceBefore, _angleTokenBalance / 9, DELTA);
 
             // 4 years
             uint256 _unlockTime = block.timestamp + 4 * 365 * 86_400;
             vm.prank(gov);
-            voterProxy.lock(_proxyAngleBalanceAfter / 2, _unlockTime);
+            voterProxy.lock(_voterAngleBalanceAfter / 2, _unlockTime);
             uint256 _balance = veAngleToken.balanceOf(address(voter));
             assertGt(_balance, 0);
 
             // increase amount
-            uint256 toLock = angleToken.balanceOf(address(voterProxy));
+            uint256 toLock = angleToken.balanceOf(address(voter));
             vm.prank(gov);
             voterProxy.increaseAmount(toLock);
             assertGt(veAngleToken.balanceOf(address(voter)), _balance);
@@ -81,7 +81,7 @@ contract AngleVoterLock is StrategyFixture {
             vm.prank(gov);
             voter.release();
             assert(veAngleToken.balanceOf(address(voter)) == 0);
-            assert(angleToken.balanceOf(address(voter)) == _proxyAngleBalanceAfter);
+            assert(angleToken.balanceOf(address(voter)) == _voterAngleBalanceAfter);
         }
     }
 }

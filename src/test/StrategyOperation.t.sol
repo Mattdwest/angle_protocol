@@ -183,14 +183,14 @@ contract StrategyOperationsTest is StrategyFixture {
             // Airdrop 1 angle for every $1000
             deal(address(angleToken), address(strategy), _fuzzAmount / 1000);
 
-            uint256 _proxyAngleBalanceBefore = angleToken.balanceOf(address(voterProxy));
+            uint256 _voterAngleBalanceBefore = angleToken.balanceOf(address(voter));
             vm.prank(strategist);
             strategy.tend();
             uint256 _angleTokenBalance = strategy.balanceOfAngleToken();
             assertGt(_angleTokenBalance, 0);
 
-            assertGt(angleToken.balanceOf(address(voterProxy)), _proxyAngleBalanceBefore);
-            assertRelApproxEq(angleToken.balanceOf(address(voterProxy)) - _proxyAngleBalanceBefore, _angleTokenBalance / 9, DELTA);
+            assertGt(angleToken.balanceOf(address(voter)), _voterAngleBalanceBefore);
+            assertRelApproxEq(angleToken.balanceOf(address(voter)) - _voterAngleBalanceBefore, _angleTokenBalance / 9, DELTA);
 
             address _tokenIn = address(strategy.angleToken());
             address _tokenOut = address(want);

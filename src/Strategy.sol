@@ -227,7 +227,7 @@ contract Strategy is BaseStrategy {
             uint256 _tokensToKeep =
                 (_tokensAvailable * percentKeep) / MAX_BPS;
             if (_tokensToKeep > 0) {
-                IERC20(angleToken).transfer(address(strategyProxy), _tokensToKeep);
+                IERC20(angleToken).transfer(address(strategyProxy.yearnAngleVoter()), _tokensToKeep);
             }
         }
 
@@ -305,7 +305,7 @@ contract Strategy is BaseStrategy {
 
     // can be used in conjunction with migration if this function is still working
     function claimRewards() external onlyVaultManagers {
-        sanTokenGauge.claim_rewards();
+        strategyProxy.claimRewards(address(sanTokenGauge));
     }
 
     // transfers all tokens to new strategy
