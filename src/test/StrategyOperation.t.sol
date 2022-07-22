@@ -5,6 +5,7 @@ import "forge-std/console.sol";
 import {StrategyFixture} from "./utils/StrategyFixture.sol";
 import {IVault} from "../interfaces/Yearn/Vault.sol";
 import {Strategy} from "../Strategy.sol";
+import {AngleStrategyVoterProxy} from "../AngleStrategyVoterProxy.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@yearnvaults/contracts/yToken.sol";
 import "../interfaces/Angle/IStableMaster.sol";
@@ -151,6 +152,7 @@ contract StrategyOperationsTest is StrategyFixture {
             IVault vault = _assetFixture.vault;
             Strategy strategy = _assetFixture.strategy;
             IERC20 want = _assetFixture.want;
+            AngleStrategyVoterProxy voterProxy = strategy.strategyProxy();
 
             uint256 _amount = _fuzzAmount;
             uint8 _wantDecimals = IERC20Metadata(address(want)).decimals();
@@ -181,14 +183,14 @@ contract StrategyOperationsTest is StrategyFixture {
             // Airdrop 1 angle for every $1000
             deal(address(angleToken), address(strategy), _fuzzAmount / 1000);
 
-            uint256 _treasuryVaultAngleBalanceBefore = angleToken.balanceOf(yearnTreasuryVault);
+            uint256 _voterAngleBalanceBefore = angleToken.balanceOf(address(voter));
             vm.prank(strategist);
             strategy.tend();
             uint256 _angleTokenBalance = strategy.balanceOfAngleToken();
             assertGt(_angleTokenBalance, 0);
-            uint256 _treasuryVaultAngleBalanceAfter = angleToken.balanceOf(yearnTreasuryVault);
-            assertGt(_treasuryVaultAngleBalanceAfter, _treasuryVaultAngleBalanceBefore);
-            assertRelApproxEq(_treasuryVaultAngleBalanceAfter - _treasuryVaultAngleBalanceBefore, _angleTokenBalance / 9, DELTA);
+
+            assertGt(angleToken.balanceOf(address(voter)), _voterAngleBalanceBefore);
+            assertRelApproxEq(angleToken.balanceOf(address(voter)) - _voterAngleBalanceBefore, _angleTokenBalance / 9, DELTA);
 
             address _tokenIn = address(strategy.angleToken());
             address _tokenOut = address(want);

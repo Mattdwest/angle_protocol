@@ -18,6 +18,8 @@ import "./interfaces/Angle/IStableMaster.sol";
 import "./interfaces/Angle/IAngleGauge.sol";
 import "./interfaces/Yearn/ITradeFactory.sol";
 import "./interfaces/Uniswap/IUniV2.sol";
+import {AngleStrategyVoterProxy} from "./AngleStrategyVoterProxy.sol";
+
 
 interface IBaseFee {
     function isCurrentBaseFeeAcceptable() external view returns (bool);
@@ -33,6 +35,8 @@ contract Strategy is BaseStrategy {
 
     IERC20 public constant angleToken = IERC20(0x31429d1856aD1377A8A0079410B297e1a9e214c2);
     IStableMaster public constant angleStableMaster = IStableMaster(0x5adDc89785D75C86aB939E9e15bfBBb7Fc086A87);
+    AngleStrategyVoterProxy public strategyProxy;
+
     uint256 public constant MAX_BPS = 10000;
 
     // variable for determining how much governance token to hold for voting rights
@@ -56,13 +60,15 @@ contract Strategy is BaseStrategy {
         address _vault,
         address _sanToken,
         address _sanTokenGauge,
-        address _poolManager
+        address _poolManager,
+        address _strategyProxy
     ) public BaseStrategy(_vault) {
         // Constructor should initialize local variables
         _initializeStrategy(
             _sanToken,
             _sanTokenGauge,
-            _poolManager
+            _poolManager,
+            _strategyProxy
         );
     }
 
@@ -71,11 +77,13 @@ contract Strategy is BaseStrategy {
     function _initializeStrategy(
         address _sanToken,
         address _sanTokenGauge,
-        address _poolManager
+        address _poolManager,
+        address _strategyProxy
     ) internal {
         sanToken = IERC20(_sanToken);
         sanTokenGauge = IAngleGauge(_sanTokenGauge);
         poolManager = _poolManager;
+        strategyProxy = AngleStrategyVoterProxy(_strategyProxy);
 
         percentKeep = 1000;
         healthCheck = 0xDDCea799fF1699e98EDF118e0629A974Df7DF012;
@@ -97,13 +105,15 @@ contract Strategy is BaseStrategy {
         address _keeper,
         address _sanToken,
         address _sanTokenGauge,
-        address _poolManager
+        address _poolManager,
+        address _strategyProxy
     ) external {
         _initialize(_vault, _strategist, _rewards, _keeper);
         _initializeStrategy(
             _sanToken,
             _sanTokenGauge,
-            _poolManager
+            _poolManager,
+            _strategyProxy
         );
     }
 
@@ -114,7 +124,8 @@ contract Strategy is BaseStrategy {
         address _keeper,
         address _sanToken,
         address _sanTokenGauge,
-        address _poolManager
+        address _poolManager,
+        address _strategyProxy
     ) external returns (address newStrategy) {
         require(isOriginal, "!clone");
         bytes20 addressBytes = bytes20(address(this));
@@ -141,7 +152,8 @@ contract Strategy is BaseStrategy {
             _keeper,
             _sanToken,
             _sanTokenGauge,
-            _poolManager
+            _poolManager,
+            _strategyProxy
         );
 
         emit Cloned(newStrategy);
@@ -208,14 +220,14 @@ contract Strategy is BaseStrategy {
         }
 
         // Claim rewards here so that we can chain tend() -> yswap sell -> harvest() in a single transaction
-        sanTokenGauge.claim_rewards();
+        strategyProxy.claimRewards(address(sanTokenGauge));
 
         uint256 _tokensAvailable = balanceOfAngleToken();
         if (_tokensAvailable > 0) {
-            uint256 _tokensToGov =
+            uint256 _tokensToKeep =
                 (_tokensAvailable * percentKeep) / MAX_BPS;
-            if (_tokensToGov > 0) {
-                angleToken.transfer(treasury, _tokensToGov);
+            if (_tokensToKeep > 0) {
+                IERC20(angleToken).transfer(address(strategyProxy.yearnAngleVoter()), _tokensToKeep);
             }
         }
 
@@ -230,13 +242,14 @@ contract Strategy is BaseStrategy {
         uint256 _wantAvailable = _balanceOfWant - _debtOutstanding;
         if (_wantAvailable > 0) {
             // deposit for sanToken
+            want.safeTransfer(address(strategyProxy), _wantAvailable);
             depositToStableMaster(_wantAvailable);
         }
 
         // Stake any san tokens, whether they originated through the above deposit or some other means (e.g. migration)
         uint256 _sanTokenBalance = balanceOfSanToken();
         if (_sanTokenBalance > 0) {
-            sanTokenGauge.deposit(_sanTokenBalance);
+            strategyProxy.stake(address(sanTokenGauge), _sanTokenBalance, address(sanToken));
         }
     }
 
@@ -278,25 +291,40 @@ contract Strategy is BaseStrategy {
 
         uint256 _sanTokenBalance = balanceOfSanToken();
         if (_amountInSanToken > _sanTokenBalance) {
-            sanTokenGauge.withdraw(
-                Math.min(_amountInSanToken - _sanTokenBalance, balanceOfStakedSanToken())
+            _amountInSanToken = Math.min(_amountInSanToken - _sanTokenBalance, balanceOfStakedSanToken());
+            strategyProxy.withdraw(
+                address(sanTokenGauge),
+                address(sanToken),
+                _amountInSanToken
             );
+            IERC20(sanToken).safeTransfer(address(strategyProxy), _amountInSanToken);
         }
 
-        withdrawFromStableMaster(Math.min(_amountInSanToken, balanceOfSanToken()));
+        withdrawFromStableMaster(_amountInSanToken);
     }
 
     // can be used in conjunction with migration if this function is still working
     function claimRewards() external onlyVaultManagers {
-        sanTokenGauge.claim_rewards();
+        strategyProxy.claimRewards(address(sanTokenGauge));
     }
 
     // transfers all tokens to new strategy
     function prepareMigration(address _newStrategy) internal override {
         // want is transferred by the base contract's migrate function
-        sanTokenGauge.withdraw(balanceOfStakedSanToken());
 
-        IERC20(sanToken).safeTransfer(_newStrategy, balanceOfSanToken());
+        uint256 _angleBalance = balanceOfAngleToken();
+        if (_angleBalance > 0) {
+            IERC20(angleToken).safeTransfer(_newStrategy, _angleBalance);
+        }
+
+        uint256 _stakedBalance = balanceOfStakedSanToken();
+        if (_stakedBalance > 0) {
+            strategyProxy.withdrawAll(address(sanTokenGauge), address(sanToken));
+            IERC20(sanToken).safeTransfer(address(strategyProxy), _stakedBalance);
+            withdrawFromStableMaster(_stakedBalance);
+        }
+
+        IERC20(sanToken).safeTransfer(_newStrategy, IERC20(sanToken).balanceOf(address(this)));
         IERC20(angleToken).transfer(_newStrategy, balanceOfAngleToken());
     }
 
@@ -424,7 +452,6 @@ contract Strategy is BaseStrategy {
         percentKeep = _percentKeep;
     }
 
-
     // ----------------- SUPPORT & UTILITY FUNCTIONS ----------
 
     function balanceOfWant() public view returns (uint256) {
@@ -432,11 +459,11 @@ contract Strategy is BaseStrategy {
     }
 
     function balanceOfStakedSanToken() public view returns (uint256) {
-        return IERC20(address(sanTokenGauge)).balanceOf(address(this));
+        return strategyProxy.balanceOfStakedSanToken(address(sanTokenGauge));
     }
 
     function balanceOfSanToken() public view returns (uint256) {
-        return sanToken.balanceOf(address(this));
+        return strategyProxy.balanceOfSanToken(address(sanToken));
     }
 
     function balanceOfAngleToken() public view returns (uint256) {
@@ -472,19 +499,22 @@ contract Strategy is BaseStrategy {
     }
 
     function depositToStableMaster(uint256 _amount) internal {
-        IStableMaster(angleStableMaster).deposit(
+        strategyProxy.depositToStableMaster(
+            address(angleStableMaster),
             _amount,
-            address(this),
-            poolManager
+            poolManager,
+            address(want),
+            address(sanTokenGauge)
         );
     }
 
     function withdrawFromStableMaster(uint256 _amountInSanToken) internal {
-        IStableMaster(angleStableMaster).withdraw(
+        strategyProxy.withdrawFromStableMaster(
+            address(angleStableMaster),
             _amountInSanToken,
-            address(this),
-            address(this),
-            poolManager
+            poolManager,
+            address(sanToken),
+            address(sanTokenGauge)
         );
     }
 
