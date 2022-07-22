@@ -67,7 +67,7 @@ contract AngleVoterLock is StrategyFixture {
             // 4 years
             uint256 _unlockTime = block.timestamp + 4 * 365 * 86_400;
             vm.prank(gov);
-            voterProxy.lock(_voterAngleBalanceAfter / 2, _unlockTime);
+            voterProxy.lock(_voterAngleBalanceAfter / 2);
             uint256 _balance = veAngleToken.balanceOf(address(voter));
             assertGt(_balance, 0);
 

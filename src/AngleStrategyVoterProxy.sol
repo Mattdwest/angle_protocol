@@ -33,6 +33,8 @@ contract AngleStrategyVoterProxy {
     YearnAngleVoter public yearnAngleVoter;
     address public constant angleToken = address(0x31429d1856aD1377A8A0079410B297e1a9e214c2);
 
+    uint256 public constant UNLOCK_TIME = 4 * 365 * 24 * 60 * 60;
+
     // gauge => strategies
     mapping(address => address) public strategies;
     mapping(address => bool) public voters;
@@ -68,15 +70,13 @@ contract AngleStrategyVoterProxy {
         voters[_voter] = false;
     }
 
-    function lock(uint256 amount, uint256 unlockTime) external {
-        require(msg.sender == governance, "!governance");
+    function lock(uint256 amount) external {
         if (amount > 0 && amount <= IERC20(angleToken).balanceOf(address(yearnAngleVoter))) {
-            yearnAngleVoter.createLock(amount, unlockTime);
+            yearnAngleVoter.createLock(amount, block.timestamp + UNLOCK_TIME);
         }
     }
 
     function increaseAmount(uint256 amount) external {
-        require(msg.sender == governance, "!governance");
         if (amount > 0 && amount <= IERC20(angleToken).balanceOf(address(yearnAngleVoter))) {
             yearnAngleVoter.increaseAmount(amount);
         }
