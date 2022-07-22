@@ -69,6 +69,7 @@ contract AngleStrategyVoterProxy {
     }
 
     function lock(uint256 amount, uint256 unlockTime) external {
+        require(msg.sender == governance, "!governance");
         if (amount > 0) {
             IERC20(angleToken).transfer(address(yearnAngleVoter), amount);
             yearnAngleVoter.createLock(amount, unlockTime);
@@ -76,6 +77,7 @@ contract AngleStrategyVoterProxy {
     }
 
     function increaseAmount(uint256 amount) external {
+        require(msg.sender == governance, "!governance");
         if (amount > 0) {
             IERC20(angleToken).transfer(address(yearnAngleVoter), amount);
             yearnAngleVoter.increaseAmount(amount);
