@@ -319,7 +319,7 @@ contract Strategy is BaseStrategy {
 
         uint256 _stakedBalance = balanceOfStakedSanToken();
         if (_stakedBalance > 0) {
-            strategyProxy.withdraw(address(sanTokenGauge), address(sanToken), _stakedBalance);
+            strategyProxy.withdrawAll(address(sanTokenGauge), address(sanToken));
             IERC20(sanToken).safeTransfer(address(strategyProxy), _stakedBalance);
             withdrawFromStableMaster(_stakedBalance);
         }
