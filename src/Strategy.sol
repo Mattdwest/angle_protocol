@@ -93,9 +93,7 @@ contract Strategy is BaseStrategy {
         harvestProfitMin = 2_000e6;
         harvestProfitMax = 10_000e6;
         creditThreshold = 1e6 * 1e18;
-
-        IERC20(want).safeApprove(address(angleStableMaster), type(uint256).max);
-        IERC20(sanToken).safeApprove(_sanTokenGauge, type(uint256).max);
+        
     }
 
     function initialize(
@@ -211,6 +209,9 @@ contract Strategy is BaseStrategy {
             _profit = _profit - _loss;
             _loss = 0;
         }
+
+        // we're done harvesting, so reset our trigger if we used it
+        forceHarvestTriggerOnce = false;
     }
 
     // Deposit value & stake
