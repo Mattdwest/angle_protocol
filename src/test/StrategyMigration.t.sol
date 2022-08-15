@@ -50,6 +50,8 @@ contract StrategyMigrationTest is StrategyFixture {
             vm.prank(gov);
             strategy.claimRewards(); // manual claim rewards
             vm.prank(gov);
+            voterProxy.revokeStrategy(gaugeAddrs[tokenSymbol]);
+            vm.prank(gov);
             vault.migrateStrategy(address(strategy), address(newStrategy));
             vm.prank(gov);
             voterProxy.approveStrategy(gaugeAddrs[tokenSymbol], address(newStrategy));

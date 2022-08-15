@@ -311,22 +311,9 @@ contract Strategy is BaseStrategy {
 
     // transfers all tokens to new strategy
     function prepareMigration(address _newStrategy) internal override {
-        // want is transferred by the base contract's migrate function
-
-        uint256 _angleBalance = balanceOfAngleToken();
-        if (_angleBalance > 0) {
-            IERC20(angleToken).safeTransfer(_newStrategy, _angleBalance);
-        }
-
-        uint256 _stakedBalance = balanceOfStakedSanToken();
-        if (_stakedBalance > 0) {
-            strategyProxy.withdrawAll(address(sanTokenGauge), address(sanToken));
-            IERC20(sanToken).safeTransfer(address(strategyProxy), _stakedBalance);
-            withdrawFromStableMaster(_stakedBalance);
-        }
-
-        IERC20(sanToken).safeTransfer(_newStrategy, IERC20(sanToken).balanceOf(address(this)));
-        IERC20(angleToken).transfer(_newStrategy, balanceOfAngleToken());
+        // Claim rewards is called externally + sweep by governance
+        // Governance can then revoke this strategy and approve the new one so the 
+        // funds assigned to this gauge in the proxy are available
     }
 
     function protectedTokens()
