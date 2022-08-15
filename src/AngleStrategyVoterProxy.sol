@@ -21,7 +21,7 @@ library SafeVoter {
         bytes memory data
     ) internal {
         (bool success, ) = voter.execute(to, value, data);
-        require(success);
+        require(success, "execute call returned False");
     }
 }
 
