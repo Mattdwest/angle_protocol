@@ -2,16 +2,13 @@
 pragma solidity ^0.8.12;
 pragma experimental ABIEncoderV2;
 
-import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 
 import {IVoteEscrow} from "./interfaces/Angle/IVoteEscrow.sol";
 
 contract YearnAngleVoter {
     using SafeERC20 for IERC20;
-    using Address for address;
     
     address constant public angle = address(0x31429d1856aD1377A8A0079410B297e1a9e214c2);
     
