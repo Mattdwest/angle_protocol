@@ -8,10 +8,12 @@ import {ExtendedTest} from "./ExtendedTest.sol";
 import {Vm} from "forge-std/Vm.sol";
 import {IVault} from "../../interfaces/Yearn/Vault.sol";
 import "../../interfaces/Angle/IStableMaster.sol";
+import "../../interfaces/Angle/IAngleWhitelister.sol";
 import "../../interfaces/Yearn/ITradeFactory.sol";
 
-// NOTE: if the name of the strat or file changes this needs to be updated
 import {Strategy} from "../../Strategy.sol";
+import {AngleStrategyVoterProxy} from "../../AngleStrategyVoterProxy.sol";
+import {YearnAngleVoter} from "../../YearnAngleVoter.sol";
 
 // Artifact paths for deploying from the deps folder, assumes that the command is run from
 // the project root.
@@ -28,6 +30,8 @@ contract StrategyFixture is ExtendedTest {
     }
 
     IERC20 public weth;
+    AngleStrategyVoterProxy public voterProxy;
+    YearnAngleVoter public voter;
 
     AssetFixture[] public assetFixtures;
 
@@ -50,9 +54,12 @@ contract StrategyFixture is ExtendedTest {
     address public constant sushiswapSwapper = 0x408Ec47533aEF482DC8fA568c36EC0De00593f44;
     address public constant angleFeeManager = 0x97B6897AAd7aBa3861c04C0e6388Fc02AF1F227f;
     address public constant yearnTreasuryVault = 0x93A62dA5a14C80f265DAbC077fCEE437B1a0Efde;
+    address public constant angleWhitelisterAdmin = 0xdC4e6DFe07EFCa50a197DF15D9200883eF4Eb1c8;
 
+    IAngleWhitelister angleWhiteLister = IAngleWhitelister(0xAa241Ccd398feC742f463c534a610529dCC5888E);
     ITradeFactory public constant tradeFactory = ITradeFactory(0x7BAF843e06095f68F4990Ca50161C2C4E4e01ec6);
     IERC20 public constant angleToken = IERC20(0x31429d1856aD1377A8A0079410B297e1a9e214c2);
+    IERC20 public constant veAngleToken = IERC20(0x0C462Dbb9EC8cD1630f1728B2CFD2769d09f0dd5);
 
     IStableMaster public constant stableMaster = IStableMaster(0x5adDc89785D75C86aB939E9e15bfBBb7Fc086A87);
 
@@ -71,7 +78,14 @@ contract StrategyFixture is ExtendedTest {
 
         weth = IERC20(tokenAddrs["WETH"]);
 
-        string[2] memory _tokensToTest = ["USDC", "DAI"];
+        address _voter = deployAngleVoter();
+        address _voterProxy = deployStrategyVoterProxy(_voter);
+        voter = YearnAngleVoter(_voter);
+        voterProxy = AngleStrategyVoterProxy(_voterProxy);
+        vm.prank(gov);
+        voter.setProxy(_voterProxy);
+
+        string[1] memory _tokensToTest = ["USDC"];
 
         for (uint8 i = 0; i < _tokensToTest.length; ++i) {
             string memory _tokenToTest = _tokensToTest[i];
@@ -87,7 +101,8 @@ contract StrategyFixture is ExtendedTest {
                 guardian,
                 management,
                 keeper,
-                strategist
+                strategist,
+                address(voterProxy) 
             );
 
             assetFixtures.push(AssetFixture(IVault(_vault), Strategy(_strategy), _want));
@@ -139,16 +154,35 @@ contract StrategyFixture is ExtendedTest {
         return address(_vault);
     }
 
+    function deployStrategyVoterProxy(address _voter) public returns (address) {
+        AngleStrategyVoterProxy _voterProxy = new AngleStrategyVoterProxy(_voter);
+        //_voterProxy.setGovernance(gov);
+
+        return address(_voterProxy);
+    }
+
+    function deployAngleVoter() public returns (address) {
+        YearnAngleVoter _voter = new YearnAngleVoter();
+        //_voter.setGovernance(gov);
+        vm.prank(angleWhitelisterAdmin);
+        angleWhiteLister.approveWallet(address(_voter));
+
+        return address(_voter);
+    }
+
     // Deploys a strategy
     function deployStrategy(
         address _vault,
-        string memory _tokenSymbol
+        address _voterProxy,
+        string memory _tokenSymbol,
+        bool _addStrat
     ) public returns (address) {
         Strategy _strategy = new Strategy(
             _vault, 
             sanTokenAddrs[_tokenSymbol], 
             gaugeAddrs[_tokenSymbol],
-            poolManagerAddrs[_tokenSymbol]
+            poolManagerAddrs[_tokenSymbol],
+            _voterProxy
         );
 
         vm.startPrank(yMech);
@@ -160,6 +194,11 @@ contract StrategyFixture is ExtendedTest {
 
         vm.prank(gov);
         _strategy.setTradeFactory(address(tradeFactory));
+
+        if(_addStrat == true) {
+            vm.prank(gov);
+            voterProxy.approveStrategy(gaugeAddrs[_tokenSymbol], address(_strategy));
+        }
 
         return address(_strategy);
     }
@@ -175,7 +214,8 @@ contract StrategyFixture is ExtendedTest {
         address _guardian,
         address _management,
         address _keeper,
-        address _strategist
+        address _strategist,
+        address _voterProxy
     ) public returns (address _vaultAddr, address _strategyAddr) {
         _vaultAddr = deployVault(
             _token,
@@ -191,7 +231,9 @@ contract StrategyFixture is ExtendedTest {
         vm.prank(_strategist);
         _strategyAddr = deployStrategy(
             _vaultAddr,
-            _tokenSymbol
+            _voterProxy,
+            _tokenSymbol,
+            true
         );
         Strategy _strategy = Strategy(_strategyAddr);
 

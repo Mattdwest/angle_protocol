@@ -4,6 +4,7 @@ pragma solidity ^0.8.12;
 import {StrategyFixture} from "./utils/StrategyFixture.sol";
 import {IVault} from "../interfaces/Yearn/Vault.sol";
 import {Strategy} from "../Strategy.sol";
+import {AngleStrategyVoterProxy} from "../AngleStrategyVoterProxy.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {IERC20Metadata} from "@yearnvaults/contracts/yToken.sol";
 // NOTE: if the name of the strat or file changes this needs to be updated
@@ -20,6 +21,7 @@ contract StrategyMigrationTest is StrategyFixture {
             IVault vault = _assetFixture.vault;
             Strategy strategy = _assetFixture.strategy;
             IERC20 want = _assetFixture.want;
+            AngleStrategyVoterProxy voterProxy = strategy.strategyProxy();
 
             uint256 _amount = _fuzzAmount;
             uint8 _wantDecimals = IERC20Metadata(address(want)).decimals();
@@ -32,6 +34,7 @@ contract StrategyMigrationTest is StrategyFixture {
             deal(address(want), user, _amount);
 
             // Deposit to the vault and harvest
+            string memory tokenSymbol = IERC20Metadata(address(want)).symbol();
             vm.prank(user);
             want.approve(address(vault), _amount);
             vm.prank(user);
@@ -43,11 +46,15 @@ contract StrategyMigrationTest is StrategyFixture {
 
             // Migrate to a new strategy
             vm.prank(strategist);
-            Strategy newStrategy = Strategy(deployStrategy(address(vault), IERC20Metadata(address(want)).symbol()));
+            Strategy newStrategy = Strategy(deployStrategy(address(vault), address(voterProxy), IERC20Metadata(address(want)).symbol(), false)); 
             vm.prank(gov);
             strategy.claimRewards(); // manual claim rewards
             vm.prank(gov);
+            voterProxy.revokeStrategy(gaugeAddrs[tokenSymbol]);
+            vm.prank(gov);
             vault.migrateStrategy(address(strategy), address(newStrategy));
+            vm.prank(gov);
+            voterProxy.approveStrategy(gaugeAddrs[tokenSymbol], address(newStrategy));
             assertRelApproxEq(newStrategy.estimatedTotalAssets(), _amount, DELTA);
         }
     }
